@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}주문 등록 - 모닝프레임{% endblock %}
+{% block content %}
+<h1 class="page-title">새 주문 등록</h1>
+
+{% if error %}
+<div class="alert alert-warn">⚠️ {{ error }}</div>
+{% endif %}
+
+<form method="post" action="/orders/new" class="form-grid" id="order-form" enctype="multipart/form-data">
+  <div class="form-section-title">📋 주문 정보 (필수)</div>
+
+  <div class="form-group">
+    <label>주문일 *</label>
+    <input type="date" name="sheet_date" value="{{ form.sheet_date or today }}" required>
+  </div>
+  <div class="form-group">
+    <label>플랫폼(구분) *</label>
+    <input type="text" name="platform" list="platform-list" required
+           value="{{ form.platform or '' }}" placeholder="예: 쿠팡, SMT모닝">
+    <datalist id="platform-list">
+      {% for p in platforms %}<option value="{{ p }}">{% endfor %}
+    </datalist>
+  </div>
+  <div class="form-group">
+    <label>주문자 *</label>
+    <input type="text" name="customer" required value="{{ form.customer or '' }}" placeholder="실명 입력">
+  </div>
+  <div class="form-group">
+    <label>연락처 *</label>
+    <input type="tel" name="phone" required value="{{ form.phone or '' }}" placeholder="010-0000-0000">
+  </div>
+  <div class="form-group full">
+    <label>배송 주소 *</label>
+    <textarea name="address" rows="3" required placeholder="우편번호 포함 전체 주소">{{ form.address or '' }}</textarea>
+  </div>
+
+  <div class="form-section-title">💰 금액 (엑셀 양식)</div>
+  <div class="form-group">
+    <label>단가 (플랫폼 공개단가) *</label>
+    <input type="number" name="unit_price" id="unit_price" min="0" required value="{{ form.unit_price or '' }}">
+  </div>
+  <div class="form-group">
+    <label>수량 *</label>
+    <input type="number" name="qty" id="qty" value="{{ form.qty or 1 }}" min="1" required>
+  </div>
+  <div class="form-group">
+    <label>판매가 (단가×수량)</label>
+    <input type="number" name="sales" id="sales" value="{{ form.sales or '' }}" step="1" readonly style="background:#f8fafc">
+  </div>
+  <div class="form-group">
+    <label>주문 수량</label>
+    <input type="number" name="order_qty" id="order_qty" value="{{ form.order_qty or form.qty or 1 }}" step="1" min="0">
+  </div>
+  <div class="form-group">
+    <label>공제액</label>
+    <input type="number" name="deduct" id="deduct" value="{{ form.deduct or 0 }}" step="1">
+  </div>
+  <div class="form-group">
+    <label>택배비</label>
+    <input type="number" name="ship" id="ship" value="{{ form.ship or 0 }}" min="0" step="1">
+  </div>
+  <div class="form-group">
+    <label>합계금액</label>
+    <input type="text" id="total_display" readonly value="0원" style="background:#f8fafc">
+  </div>
+  <div class="form-group">
+    <label>결제수단 *</label>
+    <select name="pay_method" required>
+      <option value="">선택하세요</option>
+      <option value="card" {% if form.pay_method=='card' %}selected{% endif %}>카드</option>
+      <option value="transfer" {% if form.pay_method=='transfer' %}selected{% endif %}>계좌이체</option>
+      <option value="bank" {% if form.pay_method=='bank' %}selected{% endif %}>무통장</option>
+    </select>
+  </div>
+  <div class="form-group full">
+    <label>액자 이미지 삽입</label>
+    <input type="file" name="image_file" id="image_file" accept="image/*">
+    <small style="color:#64748b;font-size:0.78rem">JPG, PNG 등 이미지 파일을 선택하면 주문 저장 후 목록에 표시됩니다.</small>
+    <img id="image_preview" class="img-preview" alt="미리보기" style="display:none;margin-top:10px;max-height:120px">
+  </div>
+  <div class="form-group full">
+    <label>비고</label>
+    <input type="text" name="remark" value="{{ form.remark or '' }}">
+  </div>
+
+  <div class="form-section-title">📦 예상출고</div>
+  <div class="form-group">
+    <label>타입</label>
+    <input type="text" name="expected_ship_type" value="{{ form.expected_ship_type or '' }}">
+  </div>
+  <div class="form-group">
+    <label>운임비</label>
+    <input type="text" name="expected_freight" value="{{ form.expected_freight or '' }}">
+  </div>
+  <div class="form-group">
+    <label>수량</label>
+    <input type="number" name="expected_ship_qty" value="{{ form.expected_ship_qty or '' }}" step="1" min="0">
+  </div>
+
+  <div class="form-section-title">🖼 액자 상세 (생산 스펙)</div>
+
+  <div class="form-group">
+    <label>프레임 종류 *</label>
+    <input type="text" name="frame" required value="{{ form.frame or '' }}" placeholder="A, W, C, 박스, 유화...">
+  </div>
+  <div class="form-group">
+    <label>호칭/규격 *</label>
+    <input type="text" name="size" required value="{{ form.size or '' }}" placeholder="8F, A3, 57...">
+  </div>
+  <div class="form-group">
+    <label>가로 (mm) *</label>
+    <input type="number" name="width" min="1" required value="{{ form.width or '' }}">
+  </div>
+  <div class="form-group">
+    <label>세로 (mm) *</label>
+    <input type="number" name="height" min="1" required value="{{ form.height or '' }}">
+  </div>
+  <div class="form-group">
+    <label>색상</label>
+    <input type="text" name="color" value="{{ form.color or '' }}">
+  </div>
+  <div class="form-group">
+    <label>알판</label>
+    <input type="text" name="plate" value="{{ form.plate or '' }}">
+  </div>
+  <div class="form-group">
+    <label>아크릴</label>
+    <input type="text" name="acrylic" value="{{ form.acrylic or '' }}">
+  </div>
+  <div class="form-group">
+    <label>고리</label>
+    <input type="text" name="hook" value="{{ form.hook or '' }}">
+  </div>
+
+  <div class="form-group full" style="margin-top:8px">
+    <button type="submit" class="btn btn-primary">주문 저장</button>
+    <a href="/orders" class="btn btn-secondary" style="margin-left:8px">취소</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  const unitPrice = document.getElementById('unit_price');
+  const qty = document.getElementById('qty');
+  const orderQty = document.getElementById('order_qty');
+  const sales = document.getElementById('sales');
+  const ship = document.getElementById('ship');
+  const deduct = document.getElementById('deduct');
+  const totalDisplay = document.getElementById('total_display');
+
+  function refreshAmounts() {
+    const q = parseFloat(qty.value) || 0;
+    const up = parseFloat(unitPrice.value) || 0;
+    const s = Math.round(q * up);
+    sales.value = s;
+    if (!orderQty.dataset.touched) orderQty.value = q;
+    const total = s + (parseFloat(ship.value) || 0) + (parseFloat(deduct.value) || 0);
+    totalDisplay.value = total.toLocaleString('ko-KR') + '원';
+  }
+
+  orderQty.addEventListener('input', () => { orderQty.dataset.touched = '1'; });
+  [unitPrice, qty, ship, deduct].forEach(el => el.addEventListener('input', refreshAmounts));
+  refreshAmounts();
+
+  const fileInput = document.getElementById('image_file');
+  const preview = document.getElementById('image_preview');
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) {
+      preview.style.display = 'none';
+      preview.src = '';
+      return;
+    }
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  });
+})();
+</script>
+{% endblock %}

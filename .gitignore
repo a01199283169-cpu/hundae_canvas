@@ -1,0 +1,31 @@
+# 환경·비밀
+.env
+*.env.local
+
+# DB·업로드 (로컬 데이터)
+data/orders.db
+data/orders.db-*
+data/imports/*.xlsx
+output/images/uploads/
+output/images/
+output/logs/
+output/settlement/
+output/*.txt
+
+# 엑셀 원본 (용량·개인정보)
+*.xlsx
+*.xlsm
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.cursor/
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store

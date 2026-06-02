@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block main_class %}main-wide{% endblock %}
+{% block title %}주문 관리 - 모닝프레임{% endblock %}
+{% block content %}
+<h1 class="page-title">
+  주문 관리
+  <span class="subtitle">(주문 {{ total }}건 · {{ row_count }}행)</span>
+</h1>
+
+{% if incomplete_count|default(0) > 0 %}
+<div class="alert alert-warn">
+  ⚠️ 필수 정보(주문자·연락처·주소)가 빠진 주문 <strong>{{ incomplete_count }}건</strong> —
+  <a href="/orders?incomplete=1&period={{ period }}&month={{ month }}">누락 주문만 보기</a>
+</div>
+{% endif %}
+
+<div class="toolbar orders-toolbar">
+  <form method="get" id="orders-filter-form" class="settlement-filters">
+    <div class="filter-row">
+      <label>조회</label>
+      <select name="period" id="period-select">
+        <option value="month" {% if period == 'month' %}selected{% endif %}>월별</option>
+        <option value="day" {% if period == 'day' %}selected{% endif %}>일자</option>
+        <option value="range" {% if period == 'range' %}selected{% endif %}>기간</option>
+      </select>
+    </div>
+    <div class="filter-row period-field" data-period="month" {% if period != 'month' %}style="display:none"{% endif %}>
+      <label>월</label>
+      <input type="month" name="month" value="{{ month }}">
+    </div>
+    <div class="filter-row period-field" data-period="day" {% if period != 'day' %}style="display:none"{% endif %}>
+      <label>일자</label>
+      <input type="date" name="day" value="{{ day }}">
+    </div>
+    <div class="filter-row period-field" data-period="range" {% if period != 'range' %}style="display:none"{% endif %}>
+      <label>기간</label>
+      <input type="date" name="date_from" value="{{ date_from }}">
+      <span>~</span>
+      <input type="date" name="date_to" value="{{ date_to }}">
+    </div>
+    <div class="filter-row">
+      <label>검색</label>
+      <input type="text" name="search" value="{{ search }}" placeholder="주문자/연락처/번호">
+    </div>
+    <label class="filter-check">
+      <input type="checkbox" name="incomplete" value="1" {% if incomplete_only %}checked{% endif %}> 누락만
+    </label>
+    <button type="submit" class="btn btn-secondary">조회</button>
+  </form>
+  <form method="post" action="/import/local" style="display:inline">
+    <button type="submit" class="btn btn-secondary">🔄 엑셀 동기화</button>
+  </form>
+  <a href="/orders/new" class="btn btn-primary">+ 새 주문</a>
+</div>
+
+<div class="orders-scroll-hint">↔ 가로 스크롤로 단가·금액·결제 열까지 확인</div>
+
+<div class="table-wrap orders-excel-wrap">
+  <table class="orders-excel-table">
+    <thead>
+      <tr class="hdr-row hdr-row-1">
+        <th rowspan="3" class="col-no">NO</th>
+        <th rowspan="3">날짜</th>
+        <th rowspan="3">구분</th>
+        <th rowspan="3">파일</th>
+        <th colspan="9" class="hdr-group hdr-detail">상세내역</th>
+        <th rowspan="3">수량</th>
+        <th rowspan="3">주문자</th>
+        <th rowspan="3">연락처</th>
+        <th rowspan="3" class="col-addr-h">주소</th>
+        <th rowspan="3">단가</th>
+        <th rowspan="3">수량</th>
+        <th rowspan="3">판매가</th>
+        <th rowspan="3">공제액</th>
+        <th rowspan="3">택배비</th>
+        <th rowspan="3">합계금액</th>
+        <th rowspan="3">결제수단</th>
+        <th rowspan="3">비고</th>
+        <th rowspan="3">예상출고</th>
+        <th rowspan="3" class="col-action"></th>
+      </tr>
+      <tr class="hdr-row hdr-row-2">
+        <th rowspan="2">프레임</th>
+        <th colspan="3" class="hdr-spec-group">규격 (mm)</th>
+        <th rowspan="2">색상</th>
+        <th rowspan="2">알판</th>
+        <th rowspan="2">아크릴</th>
+        <th rowspan="2">고리</th>
+        <th rowspan="2">비고</th>
+      </tr>
+      <tr class="hdr-row hdr-row-3">
+        <th class="col-size">호칭</th>
+        <th class="col-mm">가로</th>
+        <th class="col-mm">세로</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      {% set first = o.is_first_line|default(true) %}
+      <tr {% if not o.is_complete and first %}class="row-incomplete"{% elif not first %}class="row-continuation"{% endif %}>
+        <td class="col-no">{% if first %}{{ o.order_no }}{% endif %}</td>
+        <td>{% if first %}{{ o.sheet_date or o.order_date or '-' }}{% endif %}</td>
+        <td>{% if first %}<span class="badge badge-blue">{{ o.platform or '-' }}</span>{% endif %}</td>
+        <td class="col-file">
+          {% if first and o.thumb_url %}
+          <a href="/orders/{{ o.id }}"><img src="{{ o.thumb_url }}" class="order-thumb" alt=""></a>
+          {% elif first and o.has_image %}<span class="badge badge-green">Y</span>
+          {% else %}{% if first %}—{% endif %}{% endif %}
+        </td>
+        <td class="col-frame" title="{{ o.item_frame or '' }}"><span class="cell-ellipsis">{{ o.item_frame or '—' }}</span></td>
+        <td class="col-size" title="{{ o.item_size or '' }}"><span class="cell-clamp-2">{{ o.item_size or '—' }}</span></td>
+        <td class="col-num col-mm">{{ o.item_width if o.item_width is not none else '—' }}</td>
+        <td class="col-num col-mm">{{ o.item_height if o.item_height is not none else '—' }}</td>
+        <td class="col-spec-txt">{{ o.item_color or '—' }}</td>
+        <td class="col-spec-txt">{{ o.item_plate or '—' }}</td>
+        <td class="col-spec-txt">{{ o.item_acrylic or '—' }}</td>
+        <td class="col-spec-txt">{{ o.item_hook or '—' }}</td>
+        <td class="col-wrap-2" title="{{ o.item_note or '' }}"><span class="cell-clamp-2">{{ o.item_note or '—' }}</span></td>
+        <td class="col-num">{{ o.item_qty if o.item_qty is not none else '—' }}</td>
+        <td>{% if first %}{{ o.customer or '—' }}{% endif %}</td>
+        <td>{% if first %}{{ o.phone or '—' }}{% endif %}</td>
+        <td class="col-addr">{% if first %}{{ o.address or '—' }}{% endif %}</td>
+        <td class="col-num">{{ "{:,.0f}".format(o.unit_price) if o.unit_price is not none else '—' }}</td>
+        <td class="col-num">
+          {% if first %}{{ o.order_qty if o.order_qty is not none else (o.item_qty if o.item_qty is not none else '—') }}
+          {% else %}{{ o.item_qty if o.item_qty is not none else '—' }}{% endif %}
+        </td>
+        <td class="col-num">
+          {% if first and o.sales is not none %}{{ "{:,.0f}".format(o.sales) }}
+          {% elif not first and o.line_sales %}{{ "{:,.0f}".format(o.line_sales) }}
+          {% else %}—{% endif %}
+        </td>
+        <td class="col-num">{% if first and o.deduct is not none %}{{ "{:,.0f}".format(o.deduct) }}{% endif %}</td>
+        <td class="col-num">{% if first and o.ship is not none %}{{ "{:,.0f}".format(o.ship) }}{% endif %}</td>
+        <td class="col-num col-total">{% if first and o.total is not none %}<strong>{{ "{:,.0f}".format(o.total) }}</strong>{% endif %}</td>
+        <td>{% if first %}{{ o.payment_label or '—' }}{% endif %}</td>
+        <td>{% if first %}{{ o.remark or '—' }}{% endif %}</td>
+        <td title="{% if first %}{{ o.expected_ship_label }}{% endif %}">{% if first %}{{ o.expected_ship_label or '—' }}{% endif %}</td>
+        <td class="col-action">{% if first %}<a href="/orders/{{ o.id }}" class="btn btn-secondary btn-sm">{% if not o.is_complete %}수정{% else %}상세{% endif %}</a>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="27" class="empty-row">주문이 없습니다.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  const sel = document.getElementById('period-select');
+  const fields = document.querySelectorAll('.period-field');
+  function syncPeriod() {
+    fields.forEach(f => { f.style.display = f.dataset.period === sel.value ? '' : 'none'; });
+  }
+  sel.addEventListener('change', syncPeriod);
+})();
+</script>
+{% endblock %}

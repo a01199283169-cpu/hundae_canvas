@@ -1,0 +1,18 @@
+# Render.com — FastAPI 백엔드 배포 (권장)
+services:
+  - type: web
+    name: moning-prm-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn web.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONING_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: MONING_UPLOAD_DIR
+        value: /tmp/uploads
+    disk:
+      name: moning-data
+      mountPath: /data
+      sizeGB: 1

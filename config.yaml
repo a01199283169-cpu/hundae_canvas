@@ -1,0 +1,55 @@
+# 모닝프레임 주문 자동화 설정
+
+paths:
+  data_dir: data
+  output_dir: output
+  db_file: data/orders.db
+  price_catalog: data/price_catalog.xlsx
+  imports_dir: data/imports
+
+# 플랫폼명 정규화 (엑셀 표기 → 통일명)
+platform_aliases:
+  "SMT모닝": "SMT모닝"
+  "쇼핑몰\n모닝": "쇼핑몰 모닝"
+  "쇼핑몰\n현대": "쇼핑몰 현대"
+  "모닝\n개인결제창": "모닝 개인결제창"
+  "모닝24\n피코코리아": "모닝24 피코코리아"
+  "네이버페이": "네이버페이"
+  "프레임연구소": "프레임연구소"
+  "쿠팡": "쿠팡"
+
+# 엑셀 헤더 탐지 키워드
+header_keywords:
+  order_no: ["NO", "번호"]
+  date: ["날짜"]
+  platform: ["구분"]
+  file: ["파일"]
+  frame: ["프레임"]
+  size: ["호칭"]
+  width: ["가로"]
+  height: ["세로"]
+  color: ["색상"]
+  plate: ["알판"]
+  acrylic: ["아크릴"]
+  hook: ["고리"]
+  item_note: ["비고"]
+  qty: ["수량"]
+  customer: ["주문자"]
+  phone: ["연락처"]
+  address: ["주소"]
+  unit_price: ["단가"]
+  order_qty: ["수량"]
+  sales: ["판매가"]
+  deduct: ["공제액"]
+  ship: ["택배비"]
+  total: ["합계금액", "합계"]
+  pay_card: ["카드"]
+  pay_transfer: ["계좌이체", "하나", "농협"]
+  pay_bank: ["무통장"]
+  remark: ["비고"]
+
+# 데이터 시작 행 탐색 범위
+parse:
+  header_search_rows: [5, 6, 7, 8]
+  data_start_row: 9
+  max_data_row: 500

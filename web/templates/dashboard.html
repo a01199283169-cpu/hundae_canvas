@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}대시보드 - 모닝프레임{% endblock %}
+{% block content %}
+<h1 class="page-title">대시보드</h1>
+
+{# KPI 카드 — 도형 아이콘 + 숫자 #}
+<div class="dash-kpi-grid">
+  <div class="dash-kpi card">
+    <div class="kpi-shape kpi-shape-primary">📋</div>
+    <div class="kpi-body">
+      <div class="label">전체 주문</div>
+      <div class="value">{{ stats.total_orders }}<span class="unit">건</span></div>
+    </div>
+  </div>
+  <div class="dash-kpi card">
+    <div class="kpi-shape kpi-shape-accent">📅</div>
+    <div class="kpi-body">
+      <div class="label">오늘 주문</div>
+      <div class="value">{{ stats.today_orders }}<span class="unit">건</span></div>
+    </div>
+  </div>
+  <div class="dash-kpi card">
+    <div class="kpi-shape kpi-shape-secondary">📦</div>
+    <div class="kpi-body">
+      <div class="label">품목 수</div>
+      <div class="value">{{ stats.total_items }}<span class="unit">개</span></div>
+    </div>
+  </div>
+  <div class="dash-kpi card">
+    <div class="kpi-shape kpi-shape-chart4">💵</div>
+    <div class="kpi-body">
+      <div class="label">판매가 합계</div>
+      <div class="value">{{ "{:,.0f}".format(stats.total_sales) }}<span class="unit">원</span></div>
+    </div>
+  </div>
+  <div class="dash-kpi card">
+    <div class="kpi-shape kpi-shape-primary">💰</div>
+    <div class="kpi-body">
+      <div class="label">합계금액</div>
+      <div class="value">{{ "{:,.0f}".format(stats.total_amount) }}<span class="unit">원</span></div>
+    </div>
+  </div>
+  <div class="dash-kpi card">
+    <div class="kpi-ring-wrap">
+      <div class="kpi-ring" style="--pct: {{ stats.image_pct }}"></div>
+      <span class="kpi-ring-label">{{ stats.image_pct }}%</span>
+    </div>
+    <div class="kpi-body">
+      <div class="label">이미지 첨부</div>
+      <div class="value">{{ stats.with_image }}<span class="unit">/ {{ stats.total_orders }}건</span></div>
+    </div>
+  </div>
+</div>
+
+{# 차트 그리드 #}
+<div class="dash-charts">
+  <div class="chart-card card">
+    <h3 class="chart-title">일별 매출 · 주문 추이</h3>
+    <p class="chart-sub">최근 14일</p>
+    <div class="chart-canvas-wrap">
+      <canvas id="chart-daily"></canvas>
+    </div>
+  </div>
+  <div class="chart-card card">
+    <h3 class="chart-title">월별 매출</h3>
+    <p class="chart-sub">최근 6개월</p>
+    <div class="chart-canvas-wrap">
+      <canvas id="chart-monthly"></canvas>
+    </div>
+  </div>
+  <div class="chart-card card">
+    <h3 class="chart-title">구분별 주문</h3>
+    <p class="chart-sub">플랫폼 · 채널</p>
+    <div class="chart-canvas-wrap chart-canvas-donut">
+      <canvas id="chart-platform"></canvas>
+    </div>
+  </div>
+  <div class="chart-card card">
+    <h3 class="chart-title">결제 현황</h3>
+    <p class="chart-sub">완료 / 미결</p>
+    <div class="chart-canvas-wrap chart-canvas-donut">
+      <canvas id="chart-payment"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-info">
+  웹에서 주문을 직접 등록하거나, 기존 엑셀은 <strong>참고용 Import</strong>로 한 번만 가져올 수 있습니다.
+  <a href="/orders/new" class="btn btn-primary btn-sm" style="margin-left:12px">+ 새 주문</a>
+  <a href="/import" class="btn btn-secondary btn-sm">엑셀 Import</a>
+</div>
+
+{% if incomplete_count|default(0) > 0 %}
+<div class="alert alert-warn">
+  ⚠️ 주문자·연락처·주소가 빠진 주문 <strong>{{ incomplete_count }}건</strong> —
+  <a href="/orders?incomplete=1">지금 입력하기</a>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const C = {{ stats.charts | tojson }};
+
+  /* soft-pop 테마 색상 */
+  const colors = {
+    primary: 'oklch(0.5106 0.2301 276.9656)',
+    secondary: 'oklch(0.7038 0.1230 182.5025)',
+    accent: 'oklch(0.7686 0.1647 70.0804)',
+    chart4: 'oklch(0.6559 0.2118 354.3084)',
+    chart5: 'oklch(0.7227 0.1920 149.5793)',
+    muted: 'oklch(0.9551 0 0)',
+    success: 'oklch(0.7227 0.1920 149.5793)',
+    warn: 'oklch(0.6368 0.2078 25.3313)',
+  };
+  const palette = [colors.primary, colors.secondary, colors.accent, colors.chart4, colors.chart5,
+    'oklch(0.85 0.12 277)', 'oklch(0.80 0.10 182)', 'oklch(0.88 0.14 70)'];
+
+  const fontFamily = '"DM Sans", "Malgun Gothic", sans-serif';
+  Chart.defaults.font.family = fontFamily;
+  Chart.defaults.color = 'oklch(0.3211 0 0)';
+  Chart.defaults.borderColor = 'oklch(0 0 0 / 0.12)';
+
+  const fmtWon = (v) => (v >= 10000 ? (v / 10000).toFixed(0) + '만' : v.toLocaleString());
+
+  /* 일별 — 막대(주문) + 선(매출) */
+  if (C.daily_labels.length) {
+    new Chart(document.getElementById('chart-daily'), {
+      type: 'bar',
+      data: {
+        labels: C.daily_labels,
+        datasets: [
+          {
+            label: '주문(건)',
+            data: C.daily_orders,
+            backgroundColor: colors.secondary + '99',
+            borderColor: colors.secondary,
+            borderWidth: 2,
+            borderRadius: 6,
+            yAxisID: 'y',
+            order: 2,
+          },
+          {
+            label: '매출(원)',
+            data: C.daily_sales,
+            type: 'line',
+            borderColor: colors.primary,
+            backgroundColor: colors.primary + '22',
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: colors.primary,
+            fill: true,
+            tension: 0.35,
+            yAxisID: 'y1',
+            order: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                if (ctx.datasetIndex === 1) return '매출: ' + Number(ctx.raw).toLocaleString() + '원';
+                return '주문: ' + ctx.raw + '건';
+              },
+            },
+          },
+        },
+        scales: {
+          y: { beginAtZero: true, position: 'left', title: { display: true, text: '건' } },
+          y1: {
+            beginAtZero: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { callback: (v) => fmtWon(v) },
+          },
+        },
+      },
+    });
+  } else {
+    document.getElementById('chart-daily').parentElement.innerHTML = '<p class="chart-empty">일별 데이터 없음</p>';
+  }
+
+  /* 월별 매출 막대 */
+  if (C.month_labels.length) {
+    new Chart(document.getElementById('chart-monthly'), {
+      type: 'bar',
+      data: {
+        labels: C.month_labels,
+        datasets: [{
+          label: '합계금액',
+          data: C.month_sales,
+          backgroundColor: palette.map((c) => c + 'bb'),
+          borderColor: palette,
+          borderWidth: 2,
+          borderRadius: 8,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => '매출: ' + Number(ctx.raw).toLocaleString() + '원 (' + C.month_orders[ctx.dataIndex] + '건)',
+            },
+          },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => fmtWon(v) } },
+        },
+      },
+    });
+  } else {
+    document.getElementById('chart-monthly').parentElement.innerHTML = '<p class="chart-empty">월별 데이터 없음</p>';
+  }
+
+  /* 구분별 도넛 */
+  if (C.platform_labels.length) {
+    new Chart(document.getElementById('chart-platform'), {
+      type: 'doughnut',
+      data: {
+        labels: C.platform_labels,
+        datasets: [{
+          data: C.platform_counts,
+          backgroundColor: palette,
+          borderColor: '#fff',
+          borderWidth: 3,
+          hoverOffset: 8,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        plugins: {
+          legend: { position: 'right', labels: { boxWidth: 14, padding: 10, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const sales = C.platform_sales[ctx.dataIndex];
+                return ctx.label + ': ' + ctx.raw + '건 (' + Number(sales).toLocaleString() + '원)';
+              },
+            },
+          },
+        },
+      },
+    });
+  } else {
+    document.getElementById('chart-platform').parentElement.innerHTML = '<p class="chart-empty">구분 데이터 없음</p>';
+  }
+
+  /* 결제 도넛 */
+  const payTotal = C.payment_counts[0] + C.payment_counts[1];
+  if (payTotal > 0) {
+    new Chart(document.getElementById('chart-payment'), {
+      type: 'doughnut',
+      data: {
+        labels: C.payment_labels,
+        datasets: [{
+          data: C.payment_counts,
+          backgroundColor: [colors.success, colors.warn],
+          borderColor: '#fff',
+          borderWidth: 3,
+          hoverOffset: 8,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const pct = Math.round(ctx.raw / payTotal * 100);
+                return ctx.label + ': ' + ctx.raw + '건 (' + pct + '%)';
+              },
+            },
+          },
+        },
+      },
+    });
+  } else {
+    document.getElementById('chart-payment').parentElement.innerHTML = '<p class="chart-empty">결제 데이터 없음</p>';
+  }
+})();
+</script>
+{% endblock %}

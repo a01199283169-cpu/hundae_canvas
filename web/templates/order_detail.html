@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}주문 #{{ order.order_no }} - 모닝프레임{% endblock %}
+{% block content %}
+<h1 class="page-title">주문 상세 #{{ order.order_no }}</h1>
+
+{% if order.missing and not saved %}
+<div class="alert alert-warn">
+  ⚠️ 필수 정보 누락: <strong>{{ order.missing | join(', ') }}</strong> — 아래에서 수정해 주세요.
+</div>
+{% endif %}
+
+{% if saved %}
+<div class="alert alert-info">✅ 저장되었습니다.</div>
+{% endif %}
+
+<h2 style="font-size:1rem;margin:16px 0 10px">주문자·배송·금액 (엑셀 양식)</h2>
+<form method="post" action="/orders/{{ order.id }}/edit" class="form-grid">
+  <div class="form-group">
+    <label>플랫폼(구분) *</label>
+    <input type="text" name="platform" required value="{{ order.platform or '' }}" list="platform-list">
+    <datalist id="platform-list">
+      {% for p in platforms %}<option value="{{ p }}">{% endfor %}
+    </datalist>
+  </div>
+  <div class="form-group">
+    <label>주문자 *</label>
+    <input type="text" name="customer" required value="{{ order.customer or '' }}">
+  </div>
+  <div class="form-group">
+    <label>연락처 *</label>
+    <input type="tel" name="phone" required value="{{ order.phone or '' }}">
+  </div>
+  <div class="form-group full">
+    <label>배송 주소 *</label>
+    <textarea name="address" rows="3" required>{{ order.address or '' }}</textarea>
+  </div>
+
+  <div class="form-section-title">💰 금액</div>
+  <div class="form-group">
+    <label>판매가</label>
+    <input type="number" name="sales" value="{{ order.sales or 0 }}" step="1">
+  </div>
+  <div class="form-group">
+    <label>주문 수량</label>
+    <input type="number" name="order_qty" value="{{ order.order_qty or '' }}" step="1" min="0">
+  </div>
+  <div class="form-group">
+    <label>공제액</label>
+    <input type="number" name="deduct" value="{{ order.deduct or 0 }}" step="1">
+  </div>
+  <div class="form-group">
+    <label>택배비</label>
+    <input type="number" name="ship" value="{{ order.ship or 0 }}" min="0" step="1">
+  </div>
+  <div class="form-group">
+    <label>합계 (자동계산)</label>
+    <input type="text" readonly value="{{ '{:,.0f}'.format(order.total or 0) }}원"
+           id="total-display" style="background:#f8fafc">
+  </div>
+  <div class="form-group">
+    <label>결제수단 *</label>
+    <select name="pay_method" required>
+      <option value="">선택</option>
+      <option value="card" {% if order.pay_card %}selected{% endif %}>카드</option>
+      <option value="transfer" {% if order.pay_transfer %}selected{% endif %}>계좌이체</option>
+      <option value="bank" {% if order.pay_bank %}selected{% endif %}>무통장</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>결제여부</label>
+    <select name="payment_status">
+      <option value="">자동판정</option>
+      <option value="completed" {% if order.payment_status == 'completed' %}selected{% endif %}>완료</option>
+      <option value="pending" {% if order.payment_status == 'pending' %}selected{% endif %}>미결</option>
+    </select>
+    <small style="color:#64748b;font-size:0.78rem">미선택 시 입금일·카드결제 기준 자동</small>
+  </div>
+  <div class="form-group">
+    <label>입금일</label>
+    <input type="date" name="deposit_date" value="{{ order.deposit_date or '' }}">
+  </div>
+  <div class="form-group full">
+    <label>비고</label>
+    <input type="text" name="remark" value="{{ order.remark or '' }}">
+  </div>
+
+  <div class="form-section-title">📦 예상출고</div>
+  <div class="form-group">
+    <label>타입</label>
+    <input type="text" name="expected_ship_type" value="{{ order.expected_ship_type or '' }}"
+           placeholder="예: 택배, 퀵">
+  </div>
+  <div class="form-group">
+    <label>운임비</label>
+    <input type="text" name="expected_freight" value="{{ order.expected_freight or '' }}">
+  </div>
+  <div class="form-group">
+    <label>수량</label>
+    <input type="number" name="expected_ship_qty" value="{{ order.expected_ship_qty or '' }}"
+           step="1" min="0">
+  </div>
+
+  <div class="form-group full">
+    <button type="submit" class="btn btn-primary">정보 저장</button>
+  </div>
+</form>
+
+<dl class="detail-grid" style="margin-top:20px">
+  <dt>날짜</dt><dd>{{ order.sheet_date or order.order_date }}</dd>
+  <dt>파일</dt><dd>{{ order.file_ref or ('이미지 있음' if order.has_image else '-') }}</dd>
+</dl>
+
+<h2 style="font-size:1rem;margin-bottom:10px">품목 (상세내역)</h2>
+<div class="table-wrap" style="margin-bottom:20px">
+  <table>
+    <thead>
+      <tr>
+        <th>프레임</th><th>호칭</th><th>가로</th><th>세로</th>
+        <th>색상</th><th>알판</th><th>아크릴</th><th>고리</th>
+        <th>수량</th><th>단가</th><th>비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in order.line_items %}
+      <tr>
+        <td>{{ it.frame }}</td><td>{{ it.size or '-' }}</td>
+        <td>{{ it.width or '-' }}</td><td>{{ it.height or '-' }}</td>
+        <td>{{ it.color or '-' }}</td><td>{{ it.plate or '-' }}</td>
+        <td>{{ it.acrylic or '-' }}</td><td>{{ it.hook or '-' }}</td>
+        <td>{{ it.qty }}</td>
+        <td>{{ "{:,.0f}".format(it.unit_price or 0) }}</td>
+        <td>{{ it.item_note or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2 style="font-size:1rem;margin-bottom:10px">이미지 (액자 삽입용)</h2>
+{% for img in order.images %}
+  {% if img.url %}
+  <a href="/orders/{{ order.id }}">
+    <img src="{{ img.url }}" class="img-preview" alt="주문 이미지" style="margin-right:10px">
+  </a>
+  {% else %}
+  <p style="font-size:0.82rem;color:#64748b">{{ img.image_file }}</p>
+  {% endif %}
+{% else %}
+  <p style="color:#64748b;margin-bottom:10px">등록된 이미지 없음</p>
+{% endfor %}
+
+<form method="post" action="/orders/{{ order.id }}/upload-image" enctype="multipart/form-data" style="margin:16px 0">
+  <input type="file" name="file" accept="image/*" required>
+  <button type="submit" class="btn btn-primary btn-sm">이미지 업로드</button>
+</form>
+
+<div class="toolbar">
+  <a href="/orders" class="btn btn-secondary">← 목록</a>
+  <form method="post" action="/orders/{{ order.id }}/delete" onsubmit="return confirm('삭제하시겠습니까?')">
+    <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  const sales = document.querySelector('input[name="sales"]');
+  const ship = document.querySelector('input[name="ship"]');
+  const deduct = document.querySelector('input[name="deduct"]');
+  const totalDisplay = document.getElementById('total-display');
+  function refreshTotal() {
+    const t = (parseFloat(sales.value) || 0) + (parseFloat(ship.value) || 0) + (parseFloat(deduct.value) || 0);
+    totalDisplay.value = t.toLocaleString('ko-KR') + '원';
+  }
+  [sales, ship, deduct].forEach(el => el && el.addEventListener('input', refreshTotal));
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}현대캔버스 주문관리{% endblock %}</title>
+  <link rel="icon" href="/static/logo.jpg" type="image/jpeg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a href="/" class="logo">
+      <img src="/static/logo.jpg" alt="현대캔버스">
+    </a>
+    <nav>
+      <a href="/" class="{% if page == 'dashboard' %}active{% endif %}">📊 <span>대시보드</span></a>
+      <a href="/orders" class="{% if page == 'orders' %}active{% endif %}">📋 <span>주문 관리</span></a>
+      <a href="/orders/new" class="{% if page == 'orders' %}active{% endif %}">➕ <span>주문 등록</span></a>
+      <a href="/production" class="{% if page == 'production' %}active{% endif %}">🏭 <span>생산 지시</span></a>
+      <a href="/settlement" class="{% if page == 'settlement' %}active{% endif %}">💰 <span>매출현황</span></a>
+      <a href="/prices" class="{% if page == 'prices' %}active{% endif %}">🏷 <span>단가표</span></a>
+      <a href="/import" class="{% if page == 'import' %}active{% endif %}">📥 <span>엑셀 참조 Import</span></a>
+    </nav>
+  </aside>
+  <main class="main {% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Netlify 설정
+# FastAPI+SQLite는 Netlify 서버리스에서 영구 DB를 쓸 수 없습니다.
+# 권장: API는 Render/Railway, DB는 Supabase, Netlify는 정적 프록시 또는 추후 SPA 전환
+
+[build]
+  # 현재는 FastAPI 단일 앱 — Netlify 단독 배포 비권장
+  # API를 Render 등에 배포한 뒤 아래 리다이렉트 사용
+  publish = "web/static"
+  command = "echo 'Use Render for API — see docs/DEPLOYMENT.md'"
+
+# API 서버로 프록시 (MONING_API_URL 설정 후 Netlify 환경변수와 연동)
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://YOUR-API.onrender.com/:splat"
+#   status = 200
+#   force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404

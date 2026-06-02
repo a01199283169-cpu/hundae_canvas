@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}단가표 - 모닝프레임{% endblock %}
+{% block content %}
+<h1 class="page-title">플랫폼 단가표</h1>
+
+<div class="alert alert-info">
+  단가는 <strong>인터넷 플랫폼에 게시된 공식 단가</strong>를 입력하세요.<br>
+  파일 위치: <code>{{ catalog_path }}</code>
+</div>
+
+<div class="toolbar">
+  <a href="/prices/download" class="btn btn-primary">📥 단가표 Excel 다운로드/편집</a>
+  <a href="/prices/validate" class="btn btn-secondary">🔍 단가 검증 리포트 다운로드</a>
+</div>
+
+<div class="card" style="padding:20px">
+  <h3 style="margin-bottom:12px;font-size:0.95rem">단가표 관리 방법</h3>
+  <ol style="padding-left:20px;line-height:2;color:#475569">
+    <li>「단가표 Excel 다운로드」로 파일을 받습니다.</li>
+    <li>플랫폼별 공개 단가를 입력/수정합니다.</li>
+    <li>저장 후 「단가 검증」으로 주문 단가와 비교합니다.</li>
+  </ol>
+</div>
+{% endblock %}

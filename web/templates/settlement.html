@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block main_class %}main-wide{% endblock %}
+{% block title %}매출현황 - 모닝프레임{% endblock %}
+{% block content %}
+<h1 class="page-title">매출현황</h1>
+
+<div class="toolbar settlement-toolbar">
+  <form method="get" id="settlement-form" class="settlement-filters">
+    <div class="filter-row">
+      <label>조회</label>
+      <select name="period" id="period-select">
+        <option value="month" {% if data.period == 'month' %}selected{% endif %}>월별</option>
+        <option value="day" {% if data.period == 'day' %}selected{% endif %}>일자</option>
+        <option value="range" {% if data.period == 'range' %}selected{% endif %}>기간</option>
+      </select>
+    </div>
+    <div class="filter-row period-field" data-period="month" {% if data.period != 'month' %}style="display:none"{% endif %}>
+      <label>월</label>
+      <input type="month" name="month" value="{{ data.month or month }}">
+    </div>
+    <div class="filter-row period-field" data-period="day" {% if data.period != 'day' %}style="display:none"{% endif %}>
+      <label>일자</label>
+      <input type="date" name="day" value="{{ data.day or '' }}">
+    </div>
+    <div class="filter-row period-field" data-period="range" {% if data.period != 'range' %}style="display:none"{% endif %}>
+      <label>기간</label>
+      <input type="date" name="date_from" value="{{ data.date_from or '' }}">
+      <span>~</span>
+      <input type="date" name="date_to" value="{{ data.date_to or '' }}">
+    </div>
+    <div class="filter-row">
+      <label>결제수단</label>
+      <select name="pay_method">
+        <option value="">전체</option>
+        <option value="card" {% if data.pay_method == 'card' %}selected{% endif %}>카드</option>
+        <option value="transfer" {% if data.pay_method == 'transfer' %}selected{% endif %}>계좌이체</option>
+        <option value="bank" {% if data.pay_method == 'bank' %}selected{% endif %}>무통장</option>
+      </select>
+    </div>
+    <div class="filter-row">
+      <label>결제여부</label>
+      <select name="payment_status">
+        <option value="">전체</option>
+        <option value="completed" {% if data.payment_status == 'completed' %}selected{% endif %}>완료</option>
+        <option value="pending" {% if data.payment_status == 'pending' %}selected{% endif %}>미결</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-secondary">조회</button>
+  </form>
+  <a href="/settlement/download?{{ query_string }}" class="btn btn-primary">📥 Excel 다운로드</a>
+</div>
+
+<div class="cards" style="margin-bottom:20px">
+  <div class="card"><div class="label">주문 건수</div><div class="value">{{ data.grand.order_count }}</div></div>
+  <div class="card"><div class="label">판매가 합계</div><div class="value">{{ "{:,.0f}".format(data.grand.sales) }}</div></div>
+  <div class="card"><div class="label">공제액</div><div class="value">{{ "{:,.0f}".format(data.grand.deduct) }}</div></div>
+  <div class="card"><div class="label">택배비</div><div class="value">{{ "{:,.0f}".format(data.grand.ship) }}</div></div>
+  <div class="card"><div class="label">합계금액</div><div class="value">{{ "{:,.0f}".format(data.grand.total) }}</div></div>
+  <div class="card"><div class="label">결제완료</div><div class="value value-success">{{ data.grand.completed_count }}</div></div>
+  <div class="card"><div class="label">미결</div><div class="value value-warn">{{ data.grand.pending_count }}</div></div>
+</div>
+
+<h2 class="section-h2">매출 리스트 ({{ data.orders|length }}건)</h2>
+<div class="orders-scroll-hint">↔ 가로 스크롤로 결제·입금일·비고 열까지 확인</div>
+<div class="table-wrap sales-table-wrap">
+  <table class="sales-detail-table">
+    <thead>
+      <tr>
+        <th>NO</th><th>일자</th><th>구분</th><th>상세내역</th><th>주문자</th>
+        <th>단가</th><th>수량</th><th>판매가</th><th>공제액</th><th>택배비</th><th>합계</th>
+        <th>결제수단</th><th>결제여부</th><th>입금일</th><th>비고</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in data.sales_rows %}
+      {% if row.type == 'month_header' %}
+      <tr class="row-month-divider">
+        <td colspan="16">{{ row.label }}</td>
+      </tr>
+      {% elif row.type == 'day_divider' %}
+      <tr class="row-day-divider">
+        <td colspan="16">{{ row.label }}</td>
+      </tr>
+      {% elif row.type == 'day_subtotal' %}
+      <tr class="row-day-subtotal">
+        <td></td>
+        <td>{{ row.date }}</td>
+        <td colspan="3"><strong>▸ 일 합계 ({{ row.order_count }}건)</strong></td>
+        <td></td><td></td>
+        <td class="col-num"><strong>{{ "{:,.0f}".format(row.sales) }}</strong></td>
+        <td class="col-num"><strong>{{ "{:,.0f}".format(row.deduct) }}</strong></td>
+        <td class="col-num"><strong>{{ "{:,.0f}".format(row.ship) }}</strong></td>
+        <td class="col-num col-total"><strong>{{ "{:,.0f}".format(row.total) }}</strong></td>
+        <td colspan="5"></td>
+      </tr>
+      {% elif row.type == 'month_subtotal' %}
+      <tr class="row-month-subtotal">
+        <td></td>
+        <td colspan="4"><strong>▸ {{ row.label }} 합계 ({{ row.order_count }}건)</strong></td>
+        <td></td><td></td>
+        <td class="col-num"><strong>{{ "{:,.0f}".format(row.sales) }}</strong></td>
+        <td class="col-num"><strong>{{ "{:,.0f}".format(row.deduct) }}</strong></td>
+        <td class="col-num"><strong>{{ "{:,.0f}".format(row.ship) }}</strong></td>
+        <td class="col-num col-total"><strong>{{ "{:,.0f}".format(row.total) }}</strong></td>
+        <td colspan="5"></td>
+      </tr>
+      {% elif row.type == 'order' %}
+      {% set o = row.order %}
+      <tr>
+        <td class="col-no">{{ o.order_no }}</td>
+        <td>{{ o.display_date }}</td>
+        <td>{{ o.platform or '—' }}</td>
+        <td class="col-spec" title="{{ o.spec_summary }}">{{ o.spec_summary }}</td>
+        <td>{{ o.customer or '—' }}</td>
+        <td class="col-num">{{ "{:,.0f}".format(o.unit_price) if o.unit_price is not none else '—' }}</td>
+        <td class="col-num">{{ o.order_qty or o.item_qty or '—' }}</td>
+        <td class="col-num">{{ "{:,.0f}".format(o.sales or 0) }}</td>
+        <td class="col-num">{{ "{:,.0f}".format(o.deduct or 0) }}</td>
+        <td class="col-num">{{ "{:,.0f}".format(o.ship or 0) }}</td>
+        <td class="col-num col-total"><strong>{{ "{:,.0f}".format(o.total or 0) }}</strong></td>
+        <td>{{ o.payment_label }}</td>
+        <td>
+          {% if o.payment_status == 'completed' %}
+          <span class="badge badge-green">{{ o.payment_status_label }}</span>
+          {% else %}
+          <span class="badge badge-orange">{{ o.payment_status_label }}</span>
+          {% endif %}
+        </td>
+        <td>{{ o.deposit_date or '—' }}</td>
+        <td class="col-remark" title="{{ o.remark or '' }}">{{ o.remark or '—' }}</td>
+        <td><a href="/orders/{{ o.id }}" class="btn btn-secondary btn-sm">수정</a></td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="16" class="empty-row">해당 조건의 주문이 없습니다.</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if data.orders %}
+    <tfoot>
+      <tr class="summary-row">
+        <td colspan="7">조회 합계</td>
+        <td class="col-num">{{ "{:,.0f}".format(data.grand.sales) }}</td>
+        <td class="col-num">{{ "{:,.0f}".format(data.grand.deduct) }}</td>
+        <td class="col-num">{{ "{:,.0f}".format(data.grand.ship) }}</td>
+        <td class="col-num">{{ "{:,.0f}".format(data.grand.total) }}</td>
+        <td colspan="4"></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+
+<script>
+(function () {
+  const sel = document.getElementById('period-select');
+  const fields = document.querySelectorAll('.period-field');
+  function syncPeriod() {
+    fields.forEach(f => { f.style.display = f.dataset.period === sel.value ? '' : 'none'; });
+  }
+  sel.addEventListener('change', syncPeriod);
+})();
+</script>
+{% endblock %}
