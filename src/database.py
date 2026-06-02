@@ -1,38 +1,42 @@
-"""SQLite 주문 DB 스키마 및 CRUD."""
+"""주문 DB 스키마 및 CRUD — SQLite / Supabase(Postgres) 공통."""
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
-from src.config_loader import load_config, resolve_path
-from src.settings import get_database_path
+from src.db_backend import (
+    ConnectionWrapper,
+    connect,
+    init_postgres_schema,
+    insert_returning_id,
+    is_postgres,
+    order_no_order,
+)
+from src.db_backend import Row  # noqa: F401 — 하위 호환
 
 
-def get_db_path() -> Path:
-    """환경변수 DATABASE_URL 또는 config.yaml 기준 DB 경로."""
+def get_db_path():
+    """로컬 SQLite 경로 (Postgres 사용 시 None에 가까움)."""
+    from src.settings import get_database_path
+    from src.config_loader import load_config
+
+    if is_postgres():
+        return None
     return get_database_path(load_config())
 
 
-def connect() -> sqlite3.Connection:
-    db_path = get_db_path()
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
-
-
-def init_db(conn: sqlite3.Connection | None = None) -> None:
+def init_db(conn: ConnectionWrapper | None = None) -> None:
     """orders, order_items, import_logs, order_images 테이블 생성."""
     own_conn = conn is None
     if own_conn:
         conn = connect()
 
-    conn.executescript(
-        """
+    if is_postgres():
+        init_postgres_schema(conn)
+    else:
+        conn.executescript(
+            """
         CREATE TABLE IF NOT EXISTS import_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             source_file TEXT NOT NULL,
@@ -107,16 +111,17 @@ def init_db(conn: sqlite3.Connection | None = None) -> None:
         CREATE INDEX IF NOT EXISTS idx_orders_sheet_date ON orders(sheet_date);
         CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
         """
-    )
-    _migrate_columns(conn)
-    conn.commit()
+        )
+        _migrate_columns(conn)
+        conn.commit()
+
     if own_conn:
         conn.close()
 
 
-def _migrate_columns(conn: sqlite3.Connection) -> None:
-    """기존 DB에 엑셀 양식 확장 컬럼 추가."""
-    existing = {row[1] for row in conn.execute("PRAGMA table_info(orders)")}
+def _migrate_columns(conn: ConnectionWrapper) -> None:
+    """SQLite — 기존 DB에 엑셀 양식 확장 컬럼 추가."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(orders)").fetchall()}
     for name, typ in (
         ("order_qty", "REAL"),
         ("expected_ship_type", "TEXT"),
@@ -127,7 +132,6 @@ def _migrate_columns(conn: sqlite3.Connection) -> None:
     ):
         if name not in existing:
             conn.execute(f"ALTER TABLE orders ADD COLUMN {name} {typ}")
-    # 마이그레이션 후 인덱스 (컬럼 존재 보장)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_orders_deposit_date ON orders(deposit_date)"
     )
@@ -137,24 +141,23 @@ def _migrate_columns(conn: sqlite3.Connection) -> None:
 
 
 def insert_import_log(
-    conn: sqlite3.Connection,
+    conn: ConnectionWrapper,
     source_file: str,
     sheet_name: str,
     order_count: int,
     item_count: int,
 ) -> int:
-    cur = conn.execute(
+    return insert_returning_id(
+        conn,
         """
         INSERT INTO import_logs (source_file, sheet_name, imported_at, order_count, item_count)
         VALUES (?, ?, ?, ?, ?)
         """,
         (source_file, sheet_name, datetime.now().isoformat(), order_count, item_count),
     )
-    conn.commit()
-    return int(cur.lastrowid)
 
 
-def upsert_order(conn: sqlite3.Connection, order: dict[str, Any], import_id: int) -> int:
+def upsert_order(conn: ConnectionWrapper, order: dict[str, Any], import_id: int) -> int:
     """주문 upsert 후 order_id 반환."""
     conn.execute(
         """
@@ -224,7 +227,6 @@ def upsert_order(conn: sqlite3.Connection, order: dict[str, Any], import_id: int
     ).fetchone()
     order_id = int(row["id"])
 
-    # 품목은 재적재 (간단 upsert)
     conn.execute("DELETE FROM order_items WHERE order_id=?", (order_id,))
     for idx, item in enumerate(order.get("items", []), start=1):
         conn.execute(
@@ -254,13 +256,14 @@ def upsert_order(conn: sqlite3.Connection, order: dict[str, Any], import_id: int
     return order_id
 
 
-def mark_order_has_image(conn: sqlite3.Connection, order_id: int) -> None:
-    conn.execute("UPDATE orders SET has_image=1 WHERE id=?", (order_id,))
+def mark_order_has_image(conn: ConnectionWrapper, order_id: int) -> None:
+    val = True if is_postgres() else 1
+    conn.execute("UPDATE orders SET has_image=? WHERE id=?", (val, order_id))
     conn.commit()
 
 
 def insert_order_image(
-    conn: sqlite3.Connection,
+    conn: ConnectionWrapper,
     *,
     order_id: int | None,
     source_file: str,
@@ -269,24 +272,27 @@ def insert_order_image(
     image_file: str,
     mapped: bool,
 ) -> None:
+    mapped_val = mapped if is_postgres() else (1 if mapped else 0)
     conn.execute(
         """
         INSERT INTO order_images (order_id, source_file, sheet_name, excel_row, image_file, mapped)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (order_id, source_file, sheet_name, excel_row, image_file, 1 if mapped else 0),
+        (order_id, source_file, sheet_name, excel_row, image_file, mapped_val),
     )
     conn.commit()
 
 
-def fetch_orders_for_month(conn: sqlite3.Connection, year_month: str) -> list[sqlite3.Row]:
+def fetch_orders_for_month(conn: ConnectionWrapper, year_month: str) -> list[Row]:
     """YYYY-MM 형식 월 필터."""
+    agg = "STRING_AGG(oi.frame || ' ' || COALESCE(oi.size,''), ', ')" if is_postgres() else "GROUP_CONCAT(oi.frame || ' ' || COALESCE(oi.size,''), ', ')"
+    like_op = f"o.sheet_date::text LIKE %s" if is_postgres() else "o.sheet_date LIKE ?"
     return conn.execute(
-        """
-        SELECT o.*, GROUP_CONCAT(oi.frame || ' ' || COALESCE(oi.size,''), ', ') AS item_summary
+        f"""
+        SELECT o.*, {agg} AS item_summary
         FROM orders o
         LEFT JOIN order_items oi ON oi.order_id = o.id
-        WHERE o.sheet_date LIKE ? OR o.order_date LIKE ?
+        WHERE {like_op} OR o.order_date LIKE ?
         GROUP BY o.id
         ORDER BY o.sheet_date, o.order_no
         """,
@@ -294,17 +300,17 @@ def fetch_orders_for_month(conn: sqlite3.Connection, year_month: str) -> list[sq
     ).fetchall()
 
 
-def fetch_all_orders(conn: sqlite3.Connection, source_file: str | None = None) -> list[sqlite3.Row]:
-    sql = "SELECT * FROM orders"
+def fetch_all_orders(conn: ConnectionWrapper, source_file: str | None = None) -> list[Row]:
+    sql = f"SELECT * FROM orders"
     params: tuple = ()
     if source_file:
         sql += " WHERE source_file=?"
         params = (source_file,)
-    sql += " ORDER BY sheet_date, sheet_name, CAST(order_no AS INTEGER)"
+    sql += f" ORDER BY sheet_date, sheet_name, {order_no_order()}"
     return conn.execute(sql, params).fetchall()
 
 
-def fetch_order_items(conn: sqlite3.Connection, order_id: int) -> list[sqlite3.Row]:
+def fetch_order_items(conn: ConnectionWrapper, order_id: int) -> list[Row]:
     return conn.execute(
         "SELECT * FROM order_items WHERE order_id=? ORDER BY line_no",
         (order_id,),

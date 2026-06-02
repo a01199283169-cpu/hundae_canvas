@@ -38,8 +38,8 @@ def get_database_path(config: dict) -> Path:
         p = Path(rel)
         return p if p.is_absolute() else ROOT_DIR / rel
     if url.startswith("postgres://") or url.startswith("postgresql://"):
-        # 배포 시 Postgres 어댑터 연결 전까지 config 경로 fallback
-        pass
+        # Postgres — 경로 불필요 (db_backend.connect 사용)
+        return ROOT_DIR / "data" / "orders.db"
     return resolve_path(config["paths"]["db_file"])
 
 

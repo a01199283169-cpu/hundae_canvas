@@ -10,6 +10,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from src.config_loader import ensure_dirs, load_config
 from src.database import connect, fetch_order_items
+from src.db_backend import is_postgres
 
 
 def _thin_border() -> Border:
@@ -29,10 +30,11 @@ def export_production_sheet(
     paths = ensure_dirs(config)
     conn = connect()
 
-    sql = """
+    mapped_filter = "oi.mapped IS TRUE" if is_postgres() else "oi.mapped=1"
+    sql = f"""
         SELECT o.*,
                (SELECT GROUP_CONCAT(oi.image_file, '; ')
-                FROM order_images oi WHERE oi.order_id=o.id AND oi.mapped=1) AS image_paths
+                FROM order_images oi WHERE oi.order_id=o.id AND {mapped_filter}) AS image_paths
         FROM orders o
         WHERE 1=1
     """

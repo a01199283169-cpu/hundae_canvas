@@ -1,64 +1,145 @@
-# 모닝프레임 배포 가이드 (GitHub → DB → Netlify)
+# Render + Supabase 배포 가이드
 
-## 권장 아키텍처
+## 아키텍처
 
 ```
-GitHub (소스) → Supabase (PostgreSQL + Storage) → Render (FastAPI API)
-                                              ↘ Netlify (선택: 정적/프록시)
+GitHub (main)
+    ↓
+Render Web Service     ← FastAPI (화면 + API)
+    + Disk /data       ← 업로드 이미지
+    ↓
+Supabase PostgreSQL    ← 주문·매출 DB (영구)
 ```
 
-| 구성요소 | 역할 | 비고 |
-|---------|------|------|
-| **GitHub** | 코드 저장·CI | push 시 자동 배포 연동 |
-| **Supabase** | PostgreSQL DB, 이미지 Storage | SQLite 대체, 영구 저장 |
-| **Render / Railway** | FastAPI(uvicorn) 호스팅 | Netlify 단독으로는 API+DB 불가 |
-| **Netlify** | (선택) 도메인·CDN·리다이렉트 | API URL로 프록시 |
+| 구성 | 역할 |
+|------|------|
+| **Supabase** | PostgreSQL DB — 주문, 품목, 매출 데이터 |
+| **Render** | Python 서버 (uvicorn) — 웹 화면 전체 |
+| **Render Disk** | 주문 이미지 파일 (`/data/uploads`) |
 
-> **중요:** Netlify는 서버리스·정적 호스팅 중심입니다. 현재 앱(FastAPI + Jinja2 + SQLite 파일)은 **Netlify 단독 배포가 불가**하며, API 서버와 클라우드 DB가 필요합니다.
+> Netlify는 **필요 없습니다.** Render URL 하나로 접속합니다.
 
-## 로컬 개발
+---
+
+## 1단계: Supabase 프로젝트
+
+1. [supabase.com](https://supabase.com) → **New project**
+2. Region: **Northeast Asia (Seoul)** 권장
+3. DB 비밀번호 저장 (분실 시 재설정 필요)
+
+### 테이블 생성
+
+**SQL Editor** → New query → 아래 파일 내용 붙여넣기 후 **Run**:
+
+`supabase/migrations/001_initial.sql`
+
+또는 로컬에서 `DATABASE_URL`을 Supabase URI로 설정 후 앱 기동 시 `init_db()`가 자동 생성합니다.
+
+### Connection string 복사
+
+**Project Settings → Database → Connection string → URI**
+
+- **Transaction pooler** (포트 `6543`) — Render 권장
+- 끝에 `?sslmode=require` 포함 확인
+
+예:
+
+```text
+postgresql://postgres.xxxxx:비밀번호@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require
+```
+
+---
+
+## 2단계: Render Web Service
+
+1. [render.com](https://render.com) → **New → Blueprint** 또는 **Web Service**
+2. GitHub `a01199283169-cpu/hundae_canvas` 연결
+3. Branch: **main**
+4. **Blueprint** 사용 시: 저장소의 `render.yaml` 자동 적용
+
+### 수동 설정 시
+
+| 항목 | 값 |
+|------|-----|
+| Runtime | Python 3 |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn web.app:app --host 0.0.0.0 --port $PORT` |
+
+### Persistent Disk
+
+- **Add Disk** → Name: `hundae-data`, Mount: `/data`, Size: 1GB
+
+### Environment Variables
+
+| Key | Value |
+|-----|--------|
+| `MONING_ENV` | `production` |
+| `DATABASE_URL` | Supabase URI (위에서 복사) |
+| `MONING_UPLOAD_DIR` | `/data/uploads` |
+
+5. **Create Web Service** → Deploy
+
+배포 URL 예: `https://hundae-canvas.onrender.com`
+
+---
+
+## 3단계: 데이터 넣기
+
+Supabase DB는 처음 **비어 있습니다.**
+
+1. Render URL 접속
+2. **엑셀 참조 Import** → 주문내역서 xlsx 업로드  
+   또는 로컬에서 import 후 Supabase만 쓰는 경우는 Render에서 Import
+
+---
+
+## 4단계: 동작 확인
+
+- [ ] 대시보드 차트 표시
+- [ ] 주문 관리 목록
+- [ ] 매출현황 일자별·월합계
+- [ ] 주문 등록 + 이미지 업로드
+- [ ] Supabase **Table Editor**에서 `orders` 데이터 확인
+
+---
+
+## 로컬에서 Supabase 연결 테스트
 
 ```bat
 copy .env.example .env
+```
+
+`.env`에 Supabase `DATABASE_URL` 설정 후:
+
+```bat
 pip install -r requirements.txt
 run_web.bat
 ```
 
-## Render 배포 (API)
+---
 
-1. GitHub 저장소 연결
-2. `render.yaml` 사용 또는 수동:
-   - Build: `pip install -r requirements.txt`
-   - Start: `uvicorn web.app:app --host 0.0.0.0 --port $PORT`
-3. 환경변수:
-   - `DATABASE_URL=sqlite:////data/orders.db` (Render Disk 마운트 `/data`)
-   - 또는 Supabase Postgres URL
+## 환경변수 요약
 
-## Supabase 전환 (추후)
+| 변수 | 로컬 | Render |
+|------|------|--------|
+| `DATABASE_URL` | `sqlite:///data/orders.db` | Supabase Postgres URI |
+| `MONING_UPLOAD_DIR` | `output/images/uploads` | `/data/uploads` |
+| `MONING_ENV` | `development` | `production` |
 
-1. `supabase/migrations/001_initial.sql` 실행
-2. `DATABASE_URL=postgresql://...` 설정
-3. `src/database.py`에 Postgres 드라이버(psycopg2/asyncpg) 어댑터 추가 필요
+---
 
-## Netlify 연동
+## 트러블슈팅
 
-- API를 Render에 배포한 뒤 `netlify.toml`의 redirect로 `/api/*` 프록시
-- 또는 Netlify에 커스텀 도메인만 연결하고 API는 `api.도메인.com` 서브도메인
-
-## 환경변수
-
-| 변수 | 설명 |
+| 증상 | 해결 |
 |------|------|
-| `DATABASE_URL` | DB 연결 (sqlite:/// 또는 postgresql://) |
-| `MONING_UPLOAD_DIR` | 이미지 업로드 경로 |
-| `MONING_ENV` | production 시 디버그 비활성화 |
-| `MONING_API_URL` | 프론트 분리 시 API 베이스 URL |
-| `PORT` | uvicorn 포트 |
+| `could not connect to server` | URI에 `?sslmode=require` 추가, 비밀번호 특수문자 URL 인코딩 |
+| 테이블 없음 | Supabase SQL Editor에서 `001_initial.sql` 실행 |
+| 이미지 사라짐 | `MONING_UPLOAD_DIR=/data/uploads` + Render Disk 마운트 확인 |
+| 슬립(첫 접속 느림) | Render 무료 플랜 — Starter($7/월) 업그레이드 |
 
-## 배포 전 체크리스트
+---
 
-- [ ] `.env`는 Git에 커밋하지 않음 (`.env.example`만)
-- [ ] `data/orders.db`는 Git 제외 (`.gitignore`)
-- [ ] Supabase RLS·API 키 보안 설정
-- [ ] 업로드 이미지 → Supabase Storage 이전
-- [ ] 엑셀 import는 관리자 전용으로 제한
+## (선택) Supabase Storage
+
+이미지를 Disk 대신 Supabase Storage에 두려면 추후 `src/storage.py` 연동이 필요합니다.  
+현재는 **Render Disk + Postgres** 조합으로 충분합니다.

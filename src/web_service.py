@@ -8,6 +8,7 @@ from typing import Any
 
 from src.config_loader import ROOT_DIR, load_config, resolve_path
 from src.database import connect, fetch_order_items, init_db
+from src.db_backend import has_image_clause, insert_returning_id, is_postgres
 
 
 def image_to_url(image_file: str | None) -> str | None:
@@ -111,7 +112,10 @@ def _build_settlement_where(
         where.append(f"{date_expr} BETWEEN ? AND ?")
         params.extend([date_from, date_to])
     elif month:
-        where.append(f"{date_expr} LIKE ?")
+        if is_postgres():
+            where.append(f"{date_expr}::text LIKE %s")
+        else:
+            where.append(f"{date_expr} LIKE ?")
         params.append(f"{month}%")
 
     if platform:
@@ -539,7 +543,9 @@ def get_dashboard_stats() -> dict[str, Any]:
     total_items = conn.execute("SELECT COUNT(*) FROM order_items").fetchone()[0]
     total_sales = conn.execute("SELECT COALESCE(SUM(sales),0) FROM orders").fetchone()[0]
     total_amount = conn.execute("SELECT COALESCE(SUM(total),0) FROM orders").fetchone()[0]
-    with_image = conn.execute("SELECT COUNT(*) FROM orders WHERE has_image=1").fetchone()[0]
+    with_image = conn.execute(
+        f"SELECT COUNT(*) FROM orders WHERE {has_image_clause()}"
+    ).fetchone()[0]
     platforms = conn.execute(
         "SELECT COUNT(DISTINCT platform) FROM orders WHERE platform IS NOT NULL"
     ).fetchone()[0]
@@ -900,7 +906,8 @@ def create_order_web(data: dict, items: list[dict]) -> int:
         order_qty = sum(float(it.get("qty") or 0) for it in items)
     total = _calc_total(float(sales or 0), float(data.get("ship") or 0), float(data.get("deduct") or 0))
 
-    cur = conn.execute(
+    order_id = insert_returning_id(
+        conn,
         """
         INSERT INTO orders (
             import_id, source_file, sheet_name, sheet_date, order_no, order_date,
@@ -937,7 +944,6 @@ def create_order_web(data: dict, items: list[dict]) -> int:
             data.get("deposit_date"),
         ),
     )
-    order_id = int(cur.lastrowid)
 
     for idx, it in enumerate(items, start=1):
         conn.execute(
@@ -1025,16 +1031,18 @@ def save_uploaded_image(
 ) -> None:
     """주문에 이미지 파일 연결."""
     conn = connect()
+    mapped_val = True if is_postgres() else 1
+    hi_val = True if is_postgres() else 1
     conn.execute(
         """
         INSERT INTO order_images (order_id, source_file, sheet_name, excel_row, image_file, mapped)
-        VALUES (?, 'web', 'upload', 0, ?, 1)
+        VALUES (?, 'web', 'upload', 0, ?, ?)
         """,
-        (order_id, str(file_path)),
+        (order_id, str(file_path), mapped_val),
     )
     conn.execute(
-        "UPDATE orders SET has_image=1, file_ref=? WHERE id=?",
-        (original_name or file_path.name, order_id),
+        "UPDATE orders SET has_image=?, file_ref=? WHERE id=?",
+        (hi_val, original_name or file_path.name, order_id),
     )
     conn.commit()
     conn.close()
