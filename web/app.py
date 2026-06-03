@@ -5,7 +5,7 @@ from __future__ import annotations
 import shutil
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
@@ -87,6 +87,34 @@ def render(request: Request, template: str, context: dict) -> HTMLResponse:
     html = _jinja.get_template(template).render(**ctx)
     return HTMLResponse(html)
 
+
+def render_print(template: str, context: dict) -> HTMLResponse:
+    """인쇄 전용 레이아웃 — 사이드바 없음."""
+    ctx = {
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        **context,
+    }
+    html = _jinja.get_template(template).render(**ctx)
+    return HTMLResponse(html)
+
+
+def _period_subtitle(
+    *,
+    period: str = "month",
+    month: str | None = None,
+    day: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> str:
+    """인쇄 문서 상단 조회 조건 요약."""
+    if period == "day" and day:
+        return f"일자 {day}"
+    if period == "range" and date_from and date_to:
+        return f"기간 {date_from} ~ {date_to}"
+    if month:
+        return f"{month}"
+    return "전체"
+
 app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 _uploads = get_upload_dir()
 app.mount("/uploads", StaticFiles(directory=str(_uploads)), name="uploads")
@@ -165,6 +193,7 @@ async def orders_page(
             "search": search,
             "incomplete_only": incomplete == "1",
             "incomplete_count": count_incomplete_orders(),
+            "query_string": request.url.query,
         },
     )
 
@@ -372,6 +401,112 @@ async def production_page(request: Request, date_filter: str = ""):
 async def production_download():
     path = export_production_sheet()
     return FileResponse(path, filename=path.name)
+
+
+@app.get("/output", response_class=HTMLResponse)
+async def output_page(request: Request):
+    """출력·다운로드 허브."""
+    items = get_production_list(None)
+    prod_dates = sorted(
+        {i["sheet_date"] for i in items if i.get("sheet_date")},
+        reverse=True,
+    )
+    return render(
+        request,
+        "output.html",
+        {
+            "page": "output",
+            "prod_dates": prod_dates,
+            "default_month": date.today().strftime("%Y-%m"),
+        },
+    )
+
+
+@app.get("/output/print/production", response_class=HTMLResponse)
+async def print_production(date_filter: str = ""):
+    items = get_production_list(date_filter or None)
+    return render_print(
+        "print_production.html",
+        {"items": items, "date_filter": date_filter},
+    )
+
+
+@app.get("/output/print/orders", response_class=HTMLResponse)
+async def print_orders(
+    period: str = "month",
+    month: str = "",
+    day: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    search: str = "",
+    incomplete: str = "",
+):
+    if not month and period == "month":
+        month = date.today().strftime("%Y-%m")
+    orders, total = list_orders(
+        period=period,
+        month=month or None,
+        day=day or None,
+        date_from=date_from or None,
+        date_to=date_to or None,
+        search=search or None,
+        incomplete_only=incomplete == "1",
+    )
+    subtitle = _period_subtitle(
+        period=period,
+        month=month or None,
+        day=day or None,
+        date_from=date_from or None,
+        date_to=date_to or None,
+    )
+    if search:
+        subtitle += f" · 검색「{search}」"
+    if incomplete == "1":
+        subtitle += " · 누락만"
+    subtitle += f" · 주문 {total}건 / {len(orders)}행"
+    return render_print(
+        "print_orders.html",
+        {"orders": orders, "subtitle": subtitle},
+    )
+
+
+@app.get("/output/print/settlement", response_class=HTMLResponse)
+async def print_settlement(
+    period: str = "month",
+    month: str = "",
+    day: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    pay_method: str = "",
+    payment_status: str = "",
+):
+    if not month and period == "month":
+        month = date.today().strftime("%Y-%m")
+    data = get_settlement_data(
+        period=period,
+        month=month or None,
+        day=day or None,
+        date_from=date_from or None,
+        date_to=date_to or None,
+        pay_method=pay_method or None,
+        payment_status=payment_status or None,
+    )
+    if not data.get("sales_rows") and data.get("orders"):
+        data["sales_rows"] = build_sales_rows(data["orders"])
+    elif "sales_rows" not in data:
+        data["sales_rows"] = []
+    subtitle = _period_subtitle(
+        period=period,
+        month=month or None,
+        day=day or None,
+        date_from=date_from or None,
+        date_to=date_to or None,
+    )
+    subtitle += f" · {data['grand']['order_count']}건"
+    return render_print(
+        "print_settlement.html",
+        {"data": data, "subtitle": subtitle},
+    )
 
 
 @app.get("/settlement", response_class=HTMLResponse)

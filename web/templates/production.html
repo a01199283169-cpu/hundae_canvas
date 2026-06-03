@@ -20,7 +20,8 @@
     </select>
     <button type="submit" class="btn btn-secondary">필터</button>
   </form>
-  <a href="/production/download" class="btn btn-primary">📥 생산지시서 Excel 다운로드</a>
+  <a href="/output/print/production{% if date_filter %}?date_filter={{ date_filter }}{% endif %}" target="_blank" class="btn btn-secondary">🖨 인쇄</a>
+  <a href="/production/download" class="btn btn-primary">📥 Excel 다운로드</a>
 </div>
 
 <div class="table-wrap">

@@ -1,0 +1,81 @@
+{% extends "print_layout.html" %}
+{% block title %}매출현황{% endblock %}
+{% block doc_title %}매출현황{% endblock %}
+{% block print_meta %}{{ subtitle }}{% endblock %}
+{% block print_content %}
+<div class="print-summary-row">
+  <span>주문 <strong>{{ data.grand.order_count }}</strong>건</span>
+  <span>판매가 <strong>{{ "{:,.0f}".format(data.grand.sales) }}</strong>원</span>
+  <span>합계 <strong>{{ "{:,.0f}".format(data.grand.total) }}</strong>원</span>
+  <span>결제완료 {{ data.grand.completed_count }} · 미결 {{ data.grand.pending_count }}</span>
+</div>
+<table class="print-table print-table-compact">
+  <thead>
+    <tr>
+      <th>NO</th><th>일자</th><th>구분</th><th>상세내역</th><th>주문자</th>
+      <th>판매가</th><th>공제</th><th>택배</th><th>합계</th>
+      <th>결제</th><th>여부</th><th>입금일</th><th>비고</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in data.sales_rows %}
+    {% if row.type == 'month_header' %}
+    <tr class="print-row-section"><td colspan="13">{{ row.label }}</td></tr>
+    {% elif row.type == 'day_divider' %}
+    <tr class="print-row-day"><td colspan="13">{{ row.label }}</td></tr>
+    {% elif row.type == 'day_subtotal' %}
+    <tr class="print-row-sub">
+      <td></td><td>{{ row.date }}</td><td colspan="3">일 합계 ({{ row.order_count }}건)</td>
+      <td></td>
+      <td class="col-num">{{ "{:,.0f}".format(row.sales) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(row.deduct) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(row.ship) }}</td>
+      <td class="col-num"><strong>{{ "{:,.0f}".format(row.total) }}</strong></td>
+      <td colspan="4"></td>
+    </tr>
+    {% elif row.type == 'month_subtotal' %}
+    <tr class="print-row-month">
+      <td></td><td colspan="4">{{ row.label }} 합계 ({{ row.order_count }}건)</td>
+      <td></td>
+      <td class="col-num">{{ "{:,.0f}".format(row.sales) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(row.deduct) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(row.ship) }}</td>
+      <td class="col-num"><strong>{{ "{:,.0f}".format(row.total) }}</strong></td>
+      <td colspan="4"></td>
+    </tr>
+    {% elif row.type == 'order' %}
+    {% set o = row.order %}
+    <tr>
+      <td>{{ o.order_no }}</td>
+      <td>{{ o.display_date }}</td>
+      <td>{{ o.platform or '—' }}</td>
+      <td class="col-wrap">{{ o.spec_summary }}</td>
+      <td>{{ o.customer or '—' }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(o.sales or 0) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(o.deduct or 0) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(o.ship or 0) }}</td>
+      <td class="col-num"><strong>{{ "{:,.0f}".format(o.total or 0) }}</strong></td>
+      <td>{{ o.payment_label }}</td>
+      <td>{{ o.payment_status_label }}</td>
+      <td>{{ o.deposit_date or '—' }}</td>
+      <td class="col-wrap">{{ o.remark or '—' }}</td>
+    </tr>
+    {% endif %}
+    {% else %}
+    <tr><td colspan="13" class="empty-row">해당 조건의 주문이 없습니다.</td></tr>
+    {% endfor %}
+  </tbody>
+  {% if data.orders %}
+  <tfoot>
+    <tr class="print-row-total">
+      <td colspan="5">조회 합계</td>
+      <td class="col-num">{{ "{:,.0f}".format(data.grand.sales) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(data.grand.deduct) }}</td>
+      <td class="col-num">{{ "{:,.0f}".format(data.grand.ship) }}</td>
+      <td class="col-num"><strong>{{ "{:,.0f}".format(data.grand.total) }}</strong></td>
+      <td colspan="4"></td>
+    </tr>
+  </tfoot>
+  {% endif %}
+</table>
+{% endblock %}

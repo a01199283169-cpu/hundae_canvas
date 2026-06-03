@@ -1,0 +1,44 @@
+{% extends "print_layout.html" %}
+{% block title %}주문목록{% endblock %}
+{% block doc_title %}주문 관리 목록{% endblock %}
+{% block print_meta %}{{ subtitle }}{% endblock %}
+{% block print_content %}
+<table class="print-table print-table-compact">
+  <thead>
+    <tr>
+      <th>NO</th><th>날짜</th><th>구분</th><th>프레임</th><th>규격</th>
+      <th>가로</th><th>세로</th><th>색상</th><th>수량</th>
+      <th>주문자</th><th>연락처</th><th>주소</th>
+      <th>판매가</th><th>합계</th><th>결제</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for o in orders %}
+    {% set first = o.is_first_line|default(true) %}
+    <tr>
+      <td>{% if first %}{{ o.order_no }}{% endif %}</td>
+      <td>{% if first %}{{ o.sheet_date or o.order_date or '—' }}{% endif %}</td>
+      <td>{% if first %}{{ o.platform or '—' }}{% endif %}</td>
+      <td>{{ o.item_frame or '—' }}</td>
+      <td>{{ o.item_size or '—' }}</td>
+      <td>{{ o.item_width if o.item_width is not none else '—' }}</td>
+      <td>{{ o.item_height if o.item_height is not none else '—' }}</td>
+      <td>{{ o.item_color or '—' }}</td>
+      <td>{{ o.item_qty if o.item_qty is not none else '—' }}</td>
+      <td>{% if first %}{{ o.customer or '—' }}{% endif %}</td>
+      <td>{% if first %}{{ o.phone or '—' }}{% endif %}</td>
+      <td class="col-wrap">{% if first %}{{ o.address or '—' }}{% endif %}</td>
+      <td class="col-num">
+        {% if first and o.sales is not none %}{{ "{:,.0f}".format(o.sales) }}
+        {% elif not first and o.line_sales %}{{ "{:,.0f}".format(o.line_sales) }}
+        {% else %}—{% endif %}
+      </td>
+      <td class="col-num">{% if first and o.total is not none %}{{ "{:,.0f}".format(o.total) }}{% endif %}</td>
+      <td>{% if first %}{{ o.payment_label or '—' }}{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="15" class="empty-row">주문이 없습니다.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

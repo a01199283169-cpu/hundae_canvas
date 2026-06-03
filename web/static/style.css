@@ -737,6 +737,168 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
   width: 100%;
 }
 
+/* ── 출력 허브 ── */
+.page-desc {
+  color: var(--muted-foreground);
+  margin: -8px 0 20px;
+  font-size: 0.92rem;
+}
+.output-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.output-section { padding: 24px; }
+.output-section-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+.output-section-desc {
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+  margin: 0 0 20px;
+}
+.output-item {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.output-item h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+.output-item p {
+  margin: 0 0 10px;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+.output-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.output-form-wide { max-width: 100%; }
+.output-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.output-hint {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+}
+
+/* ── 인쇄 전용 페이지 ── */
+.print-page {
+  margin: 0;
+  padding: 16px 20px 40px;
+  background: #fff;
+  color: #111;
+  font-family: "Malgun Gothic", "DM Sans", sans-serif;
+  font-size: 11px;
+}
+.print-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.print-header { margin-bottom: 16px; }
+.print-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.print-logo {
+  height: 48px;
+  width: auto;
+  border-radius: 8px;
+}
+.print-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+.print-meta {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.print-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: oklch(0.97 0.02 277);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+.print-table th,
+.print-table td {
+  border: 1px solid #cbd5e1;
+  padding: 5px 6px;
+  vertical-align: top;
+}
+.print-table thead th {
+  background: oklch(0.94 0.04 277);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.print-table .col-num { text-align: right; }
+.print-table .col-wrap {
+  max-width: 140px;
+  word-break: break-word;
+  white-space: normal;
+}
+.print-row-section td {
+  background: oklch(0.90 0.10 277);
+  font-weight: 700;
+}
+.print-row-day td {
+  background: oklch(0.97 0.02 182);
+  font-weight: 600;
+}
+.print-row-sub td,
+.print-row-month td {
+  background: oklch(0.96 0.04 182);
+  font-weight: 600;
+}
+.print-row-total td {
+  background: #f1f5f9;
+  font-weight: 700;
+}
+.print-footer {
+  margin-top: 20px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  .print-page {
+    padding: 0;
+    font-size: 9px;
+  }
+  .print-table { font-size: 8px; }
+  .print-table th,
+  .print-table td { padding: 3px 4px; }
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+}
+
+@media (max-width: 900px) {
+  .output-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 768px) {
   .sidebar { width: 60px; }
   .sidebar .logo { margin: 0 8px 12px; padding: 10px; }
