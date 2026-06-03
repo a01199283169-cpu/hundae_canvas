@@ -20,8 +20,10 @@
     </select>
     <button type="submit" class="btn btn-secondary">필터</button>
   </form>
-  <a href="/output/print/production{% if date_filter %}?date_filter={{ date_filter }}{% endif %}" target="_blank" class="btn btn-secondary">🖨 인쇄</a>
-  <a href="/production/download" class="btn btn-primary">📥 Excel 다운로드</a>
+  <div class="toolbar-actions">
+    <a href="/output/print/production{% if date_filter %}?date_filter={{ date_filter }}{% endif %}" target="_blank" class="btn btn-print">인쇄하기</a>
+    <a href="/production/download" class="btn btn-primary">Excel 다운로드</a>
+  </div>
 </div>
 
 <div class="table-wrap">

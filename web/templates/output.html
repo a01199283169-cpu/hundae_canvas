@@ -49,7 +49,7 @@
           <option value="{{ d }}">{{ d }}</option>
           {% endfor %}
         </select>
-        <button type="submit" class="btn btn-primary">인쇄 미리보기</button>
+        <button type="submit" class="btn btn-print">인쇄하기</button>
       </form>
     </div>
 
@@ -69,7 +69,7 @@
         <input type="date" name="date_from" title="시작">
         <span>~</span>
         <input type="date" name="date_to" title="종료">
-        <button type="submit" class="btn btn-primary">인쇄 미리보기</button>
+        <button type="submit" class="btn btn-print">인쇄하기</button>
       </form>
     </div>
 
@@ -79,7 +79,7 @@
         <input type="hidden" name="period" value="month">
         <label>월</label>
         <input type="month" name="month" value="{{ default_month }}">
-        <button type="submit" class="btn btn-primary">인쇄 미리보기</button>
+        <button type="submit" class="btn btn-print">인쇄하기</button>
       </form>
       <p class="output-hint">상세 필터는 <a href="/settlement">매출현황</a> 화면에서 조회 후 「인쇄」를 이용하세요.</p>
     </div>

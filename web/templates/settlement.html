@@ -47,8 +47,10 @@
     </div>
     <button type="submit" class="btn btn-secondary">조회</button>
   </form>
-  <a href="/output/print/settlement?{{ query_string }}" target="_blank" class="btn btn-secondary">🖨 인쇄</a>
-  <a href="/settlement/download?{{ query_string }}" class="btn btn-primary">📥 Excel 다운로드</a>
+  <div class="toolbar-actions">
+    <a href="/output/print/settlement?{{ query_string }}" target="_blank" class="btn btn-print">인쇄하기</a>
+    <a href="/settlement/download?{{ query_string }}" class="btn btn-primary">Excel 다운로드</a>
+  </div>
 </div>
 
 <div class="cards" style="margin-bottom:20px">

@@ -88,6 +88,8 @@
   웹에서 주문을 직접 등록하거나, 기존 엑셀은 <strong>참고용 Import</strong>로 한 번만 가져올 수 있습니다.
   <a href="/orders/new" class="btn btn-primary btn-sm" style="margin-left:12px">+ 새 주문</a>
   <a href="/import" class="btn btn-secondary btn-sm">엑셀 Import</a>
+  <a href="/output" class="btn btn-secondary btn-sm">출력·다운로드</a>
+  <a href="/output/print/orders?period=month" target="_blank" class="btn btn-print btn-sm">인쇄하기</a>
 </div>
 
 {% if incomplete_count|default(0) > 0 %}

@@ -549,6 +549,23 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.btn-print {
+  background: oklch(0.97 0.04 277);
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  font-weight: 600;
+}
+.btn-print:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
 
 .toolbar input, .toolbar select {
   padding: 8px 12px;
