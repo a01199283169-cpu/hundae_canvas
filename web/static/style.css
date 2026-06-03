@@ -642,49 +642,45 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
   color: var(--primary);
 }
 
-/* 새 주문 등록 — 12열·필드별 너비 (날짜·숫자는 내용만큼만) */
-.form-grid-compact {
+/* 새 주문 등록 — 12열·필드별 너비 (span은 숫자 직접 지정, var() 미사용) */
+.form-grid.form-grid-compact {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 8px 10px;
   padding: 12px 14px;
 }
 
-.form-grid-compact .form-section-title {
+.form-grid.form-grid-compact .form-section-title {
   font-size: 0.86rem;
   padding-top: 4px;
   margin-top: 0;
 }
 
-.form-grid-compact .form-group {
+.form-grid.form-grid-compact .form-group {
   min-width: 0;
 }
 
-.form-grid-compact .form-group[class*="col-"] {
-  grid-column: span var(--col-span, 12);
-}
+.form-grid.form-grid-compact .col-1  { grid-column: span 1; }
+.form-grid.form-grid-compact .col-2  { grid-column: span 2; }
+.form-grid.form-grid-compact .col-3  { grid-column: span 3; }
+.form-grid.form-grid-compact .col-4  { grid-column: span 4; }
+.form-grid.form-grid-compact .col-5  { grid-column: span 5; }
+.form-grid.form-grid-compact .col-6  { grid-column: span 6; }
+.form-grid.form-grid-compact .col-7  { grid-column: span 7; }
+.form-grid.form-grid-compact .col-8  { grid-column: span 8; }
+.form-grid.form-grid-compact .col-9  { grid-column: span 9; }
+.form-grid.form-grid-compact .col-10 { grid-column: span 10; }
+.form-grid.form-grid-compact .col-11 { grid-column: span 11; }
+.form-grid.form-grid-compact .col-12,
+.form-grid.form-grid-compact .form-group.full { grid-column: span 12; }
 
-.form-grid-compact .col-1  { --col-span: 1; }
-.form-grid-compact .col-2  { --col-span: 2; }
-.form-grid-compact .col-3  { --col-span: 3; }
-.form-grid-compact .col-4  { --col-span: 4; }
-.form-grid-compact .col-5  { --col-span: 5; }
-.form-grid-compact .col-6  { --col-span: 6; }
-.form-grid-compact .col-7  { --col-span: 7; }
-.form-grid-compact .col-8  { --col-span: 8; }
-.form-grid-compact .col-9  { --col-span: 9; }
-.form-grid-compact .col-10 { --col-span: 10; }
-.form-grid-compact .col-11 { --col-span: 11; }
-.form-grid-compact .col-12,
-.form-grid-compact .form-group.full { --col-span: 12; }
-
-.form-grid-compact .form-group label {
+.form-grid.form-grid-compact .form-group label {
   font-size: 0.76rem;
   line-height: 1.2;
 }
 
-.form-grid-compact .form-group input,
-.form-grid-compact .form-group select,
-.form-grid-compact .form-group textarea {
+.form-grid.form-grid-compact .form-group input,
+.form-grid.form-grid-compact .form-group select,
+.form-grid.form-grid-compact .form-group textarea {
   padding: 5px 8px;
   font-size: 0.84rem;
   width: 100%;
@@ -692,36 +688,41 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
   box-sizing: border-box;
 }
 
-/* 짧은 필드: 입력란만 필요한 너비 (셀은 그리드, 입력은 왼쪽 정렬) */
-.form-grid-compact .fg-fit input,
-.form-grid-compact .fg-fit select {
+/* 짧은 필드: 입력란만 필요한 너비 */
+.form-grid.form-grid-compact .fg-fit input,
+.form-grid.form-grid-compact .fg-fit select {
   width: auto;
   min-width: 0;
 }
 
-.form-grid-compact .fg-date input[type="date"] {
+.form-grid.form-grid-compact .fg-date input[type="date"] {
   width: 10.25rem;
+  max-width: 100%;
 }
 
-.form-grid-compact .fg-phone input[type="tel"] {
+.form-grid.form-grid-compact .fg-phone input[type="tel"] {
   width: 10.5rem;
+  max-width: 100%;
 }
 
-.form-grid-compact .fg-num input[type="number"] {
+.form-grid.form-grid-compact .fg-num input[type="number"] {
   width: 4.25rem;
+  max-width: 100%;
 }
 
-.form-grid-compact .fg-money input[type="number"],
-.form-grid-compact .fg-money input[type="text"] {
+.form-grid.form-grid-compact .fg-money input[type="number"],
+.form-grid.form-grid-compact .fg-money input[type="text"] {
   width: 6.75rem;
+  max-width: 100%;
 }
 
-.form-grid-compact .fg-pay select {
-  width: 5.5rem;
+.form-grid.form-grid-compact .fg-pay select {
+  width: 6.5rem;
+  max-width: 100%;
   padding-right: 4px;
 }
 
-.form-grid-compact .form-group textarea {
+.form-grid.form-grid-compact .form-group textarea {
   resize: vertical;
   min-height: 2.35rem;
   width: 100%;
@@ -776,32 +777,9 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
 }
 
 @media (max-width: 1100px) {
-  .form-grid-compact .col-4 { --col-span: 6; }
-  .form-grid-compact .col-8 { --col-span: 12; }
-  .form-grid-compact .col-3:not(.fg-fit) { --col-span: 4; }
-}
-
-@media (max-width: 900px) {
-  .form-grid-compact {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .form-grid-compact .col-1,
-  .form-grid-compact .col-2,
-  .form-grid-compact .col-3,
-  .form-grid-compact .col-4 { --col-span: 3; }
-  .form-grid-compact .col-5,
-  .form-grid-compact .col-6,
-  .form-grid-compact .col-7,
-  .form-grid-compact .col-8,
-  .form-grid-compact .col-9,
-  .form-grid-compact .col-10,
-  .form-grid-compact .col-11,
-  .form-grid-compact .col-12 { --col-span: 6; }
-  .form-grid-compact .fg-fit input,
-  .form-grid-compact .fg-fit select {
-    width: 100%;
-    max-width: 100%;
-  }
+  .form-grid.form-grid-compact .col-4 { grid-column: span 6; }
+  .form-grid.form-grid-compact .col-8 { grid-column: span 12; }
+  .form-grid.form-grid-compact .col-3:not(.fg-fit) { grid-column: span 4; }
 }
 
 .badge {
@@ -1232,8 +1210,25 @@ button.print-btn {
   .sidebar nav a span { display: none; }
   .main { margin-left: 60px; padding: 16px; width: calc(100vw - 60px); }
   .main.main-wide { width: calc(100vw - 60px); }
-  .form-grid,
-  .form-grid-compact { grid-template-columns: 1fr; }
-  .form-grid-compact .form-group.span-2,
-  .form-grid-compact .form-group.span-3 { grid-column: 1 / -1; }
+  .form-grid:not(.form-grid-compact) { grid-template-columns: 1fr; }
+  .form-grid.form-grid-compact { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .form-grid.form-grid-compact .col-1,
+  .form-grid.form-grid-compact .col-2 { grid-column: span 2; }
+  .form-grid.form-grid-compact .col-3,
+  .form-grid.form-grid-compact .col-4 { grid-column: span 3; }
+  .form-grid.form-grid-compact .col-5,
+  .form-grid.form-grid-compact .col-6,
+  .form-grid.form-grid-compact .col-7,
+  .form-grid.form-grid-compact .col-8,
+  .form-grid.form-grid-compact .col-9,
+  .form-grid.form-grid-compact .col-10,
+  .form-grid.form-grid-compact .col-11,
+  .form-grid.form-grid-compact .col-12 { grid-column: span 6; }
+}
+
+@media (max-width: 520px) {
+  .form-grid.form-grid-compact { grid-template-columns: 1fr; }
+  .form-grid.form-grid-compact [class*="col-"] { grid-column: 1 / -1; }
+  .form-grid.form-grid-compact .fg-fit input,
+  .form-grid.form-grid-compact .fg-fit select { width: 100%; }
 }

@@ -1,6 +1,28 @@
 {% extends "base.html" %}
 {% block main_class %}main-wide{% endblock %}
 {% block title %}주문 등록 - 모닝프레임{% endblock %}
+{% block head_extra %}
+<style>
+  /* 배포·캐시와 무관하게 주문등록 레이아웃 보장 */
+  #order-form.form-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 8px 10px;
+  }
+  #order-form .col-1 { grid-column: span 1; }
+  #order-form .col-2 { grid-column: span 2; }
+  #order-form .col-3 { grid-column: span 3; }
+  #order-form .col-4 { grid-column: span 4; }
+  #order-form .col-8 { grid-column: span 8; }
+  #order-form .col-12 { grid-column: span 12; }
+  #order-form .form-section-title { grid-column: 1 / -1; }
+  #order-form .fg-date input[type="date"] { width: 10.25rem; max-width: 100%; }
+  #order-form .fg-num input[type="number"] { width: 4.25rem; max-width: 100%; }
+  #order-form .fg-money input { width: 6.75rem; max-width: 100%; }
+  #order-form .fg-phone input { width: 10.5rem; max-width: 100%; }
+  #order-form .fg-fit input, #order-form .fg-fit select { width: auto; max-width: 100%; }
+</style>
+{% endblock %}
 {% block content %}
 <h1 class="page-title">새 주문 등록</h1>
 
