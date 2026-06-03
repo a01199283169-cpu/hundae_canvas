@@ -86,8 +86,23 @@ def payment_status_label(status: str) -> str:
     return {"completed": "완료", "pending": "미결"}.get(status, "-")
 
 
-def _order_date_sql() -> str:
-    return "COALESCE(o.sheet_date, o.order_date)"
+def _order_date_sql(alias: str = "o") -> str:
+    """주문 기준일 — SQLite(TEXT) / Postgres(DATE) 공통."""
+    if alias:
+        sd, od = f"{alias}.sheet_date", f"{alias}.order_date"
+    else:
+        sd, od = "sheet_date", "order_date"
+    if is_postgres():
+        return f"COALESCE({sd}, {od})"
+    return f"COALESCE(NULLIF({sd}, ''), NULLIF({od}, ''))"
+
+
+def _order_date_text_sql(alias: str = "o") -> str:
+    """일자 문자열 비교·집계용 (Postgres DATE → text)."""
+    expr = _order_date_sql(alias)
+    if is_postgres():
+        return f"({expr})::text"
+    return expr
 
 
 def _build_settlement_where(
@@ -537,7 +552,8 @@ def _attach_thumbnails(conn, orders: list[dict]) -> None:
 def get_dashboard_stats() -> dict[str, Any]:
     """대시보드 요약 통계 + 차트용 데이터."""
     conn = connect()
-    date_expr = "COALESCE(NULLIF(sheet_date, ''), order_date)"
+    date_expr = _order_date_sql(alias="")
+    date_text = _order_date_text_sql(alias="")
 
     total_orders = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
     total_items = conn.execute("SELECT COUNT(*) FROM order_items").fetchone()[0]
@@ -558,9 +574,9 @@ def get_dashboard_stats() -> dict[str, Any]:
     # 일별 추이 (최근 14일, ISO 날짜만)
     daily_rows = conn.execute(
         f"""
-        SELECT {date_expr} AS d, COUNT(*) AS cnt, COALESCE(SUM(total), 0) AS amt
+        SELECT {date_text} AS d, COUNT(*) AS cnt, COALESCE(SUM(total), 0) AS amt
         FROM orders
-        WHERE {date_expr} GLOB '????-??-??'
+        WHERE {date_text} GLOB '????-??-??'
         GROUP BY d
         ORDER BY d DESC
         LIMIT 14
@@ -584,11 +600,11 @@ def get_dashboard_stats() -> dict[str, Any]:
     # 월별 매출
     month_rows = conn.execute(
         f"""
-        SELECT substr({date_expr}, 1, 7) AS m,
+        SELECT substr({date_text}, 1, 7) AS m,
                COUNT(*) AS cnt,
                COALESCE(SUM(total), 0) AS amt
         FROM orders
-        WHERE {date_expr} GLOB '????-??-??'
+        WHERE {date_text} GLOB '????-??-??'
         GROUP BY m
         ORDER BY m DESC
         LIMIT 6
