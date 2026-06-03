@@ -8,16 +8,19 @@
 </head>
 <body class="print-page">
   <div class="print-toolbar no-print">
-    <button type="button" class="btn btn-primary" onclick="window.print()">🖨 인쇄 (Ctrl+P)</button>
-    <button type="button" class="btn btn-secondary" onclick="window.close()">닫기</button>
-    <a href="javascript:history.back()" class="btn btn-secondary">← 돌아가기</a>
+    <span class="print-toolbar-label">인쇄 미리보기</span>
+    <div class="print-toolbar-actions">
+      <button type="button" class="print-btn print-btn-primary" onclick="window.print()">인쇄 (Ctrl+P)</button>
+      <button type="button" class="print-btn" onclick="window.close()">닫기</button>
+      <a href="javascript:history.back()" class="print-btn">돌아가기</a>
+    </div>
   </div>
   <header class="print-header">
     <div class="print-brand">
       <img src="/static/logo.jpg" alt="현대캔버스" class="print-logo">
       <div>
         <h1>{% block doc_title %}문서{% endblock %}</h1>
-        <p class="print-meta">{% block print_meta %}{% endblock %} · 출력일시 {{ generated_at }}</p>
+        <p class="print-meta">{% block print_meta %}{% endblock %} · 출력 {{ generated_at }}</p>
       </div>
     </div>
   </header>

@@ -3,85 +3,95 @@
 {% block title %}출력 - 모닝프레임{% endblock %}
 {% block content %}
 <h1 class="page-title">출력 · 다운로드</h1>
-<p class="page-desc">엑셀 파일 다운로드와 인쇄용 화면을 한곳에서 이용할 수 있습니다.</p>
+<p class="page-desc">엑셀 다운로드와 인쇄(PDF)를 한곳에서 이용합니다.</p>
 
 <div class="output-grid">
   <section class="card output-section">
-    <h2 class="output-section-title">📥 Excel 다운로드</h2>
-    <p class="output-section-desc">편집·공유용 엑셀 파일을 생성합니다.</p>
+    <h2 class="output-section-title">Excel 다운로드</h2>
 
-    <div class="output-item">
-      <h3>생산지시서</h3>
-      <p>현재 DB 기준 전체 생산 품목</p>
-      <a href="/production/download" class="btn btn-primary">생산지시서 Excel</a>
+    <div class="output-row">
+      <div class="output-row-info">
+        <h3>생산지시서</h3>
+        <p>현재 DB 전체 생산 품목</p>
+      </div>
+      <div class="output-row-action">
+        <a href="/production/download" class="btn btn-primary btn-sm">다운로드</a>
+      </div>
     </div>
 
-    <div class="output-item">
-      <h3>매출현황</h3>
-      <form method="get" action="/settlement/download" class="output-form">
-        <label>조회 월</label>
-        <input type="month" name="month" value="{{ default_month }}">
+    <div class="output-row">
+      <div class="output-row-info">
+        <h3>매출현황</h3>
+        <p>월별 매출 엑셀</p>
+      </div>
+      <form method="get" action="/settlement/download" class="output-row-action output-row-form">
+        <input type="month" name="month" value="{{ default_month }}" class="output-input">
         <input type="hidden" name="period" value="month">
-        <button type="submit" class="btn btn-primary">매출현황 Excel</button>
+        <button type="submit" class="btn btn-primary btn-sm">다운로드</button>
       </form>
     </div>
 
-    <div class="output-item">
-      <h3>단가표 · 검증</h3>
-      <div class="output-btn-row">
-        <a href="/prices/download" class="btn btn-secondary">단가표 Excel</a>
-        <a href="/prices/validate" class="btn btn-secondary">단가 검증 리포트</a>
+    <div class="output-row">
+      <div class="output-row-info">
+        <h3>단가표</h3>
+        <p>단가 편집·검증</p>
+      </div>
+      <div class="output-row-action output-row-btns">
+        <a href="/prices/download" class="btn btn-secondary btn-sm">단가표</a>
+        <a href="/prices/validate" class="btn btn-secondary btn-sm">검증</a>
       </div>
     </div>
   </section>
 
   <section class="card output-section">
-    <h2 class="output-section-title">🖨 인쇄 (A4)</h2>
-    <p class="output-section-desc">새 창에서 열린 뒤 <strong>Ctrl+P</strong>로 프린터·PDF 저장합니다.</p>
+    <h2 class="output-section-title">인쇄 (A4 가로)</h2>
+    <p class="output-section-desc">「인쇄하기」 후 <kbd>Ctrl+P</kbd>로 프린터 또는 PDF 저장</p>
 
-    <div class="output-item">
-      <h3>생산 지시</h3>
-      <form method="get" action="/output/print/production" target="_blank" class="output-form">
-        <label>날짜</label>
-        <select name="date_filter">
+    <div class="output-row">
+      <div class="output-row-info">
+        <h3>생산 지시</h3>
+      </div>
+      <form method="get" action="/output/print/production" target="_blank" class="output-row-action output-row-form">
+        <label class="output-label">날짜</label>
+        <select name="date_filter" class="output-input">
           <option value="">전체</option>
           {% for d in prod_dates %}
           <option value="{{ d }}">{{ d }}</option>
           {% endfor %}
         </select>
-        <button type="submit" class="btn btn-print">인쇄하기</button>
+        <button type="submit" class="btn btn-print btn-sm">인쇄하기</button>
       </form>
     </div>
 
-    <div class="output-item">
-      <h3>주문 목록</h3>
-      <form method="get" action="/output/print/orders" target="_blank" class="output-form output-form-wide">
-        <div class="filter-row">
-          <label>조회</label>
-          <select name="period">
-            <option value="month">월별</option>
-            <option value="day">일자</option>
-            <option value="range">기간</option>
-          </select>
-        </div>
-        <input type="month" name="month" value="{{ default_month }}" title="월별">
-        <input type="date" name="day" title="일자">
-        <input type="date" name="date_from" title="시작">
-        <span>~</span>
-        <input type="date" name="date_to" title="종료">
-        <button type="submit" class="btn btn-print">인쇄하기</button>
+    <div class="output-row output-row-tall">
+      <div class="output-row-info">
+        <h3>주문 목록</h3>
+      </div>
+      <form method="get" action="/output/print/orders" target="_blank" class="output-row-action output-row-form output-row-form-multi">
+        <select name="period" class="output-input output-input-sm" title="조회">
+          <option value="month">월별</option>
+          <option value="day">일자</option>
+          <option value="range">기간</option>
+        </select>
+        <input type="month" name="month" value="{{ default_month }}" class="output-input" title="월">
+        <input type="date" name="day" class="output-input" title="일자">
+        <span class="output-sep">~</span>
+        <input type="date" name="date_from" class="output-input" title="시작">
+        <input type="date" name="date_to" class="output-input" title="종료">
+        <button type="submit" class="btn btn-print btn-sm">인쇄하기</button>
       </form>
     </div>
 
-    <div class="output-item">
-      <h3>매출현황</h3>
-      <form method="get" action="/output/print/settlement" target="_blank" class="output-form output-form-wide">
+    <div class="output-row">
+      <div class="output-row-info">
+        <h3>매출현황</h3>
+        <p class="output-hint-inline">상세 필터는 <a href="/settlement">매출현황</a> 화면 인쇄 권장</p>
+      </div>
+      <form method="get" action="/output/print/settlement" target="_blank" class="output-row-action output-row-form">
         <input type="hidden" name="period" value="month">
-        <label>월</label>
-        <input type="month" name="month" value="{{ default_month }}">
-        <button type="submit" class="btn btn-print">인쇄하기</button>
+        <input type="month" name="month" value="{{ default_month }}" class="output-input">
+        <button type="submit" class="btn btn-print btn-sm">인쇄하기</button>
       </form>
-      <p class="output-hint">상세 필터는 <a href="/settlement">매출현황</a> 화면에서 조회 후 「인쇄」를 이용하세요.</p>
     </div>
   </section>
 </div>

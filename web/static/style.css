@@ -754,7 +754,7 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
   width: 100%;
 }
 
-/* ── 출력 허브 ── */
+/* ── 출력 허브 (/output) ── */
 .page-desc {
   color: var(--muted-foreground);
   margin: -8px 0 20px;
@@ -766,78 +766,190 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
   gap: 20px;
   align-items: start;
 }
-.output-section { padding: 24px; }
+.output-section {
+  padding: 20px 22px;
+}
 .output-section-title {
-  margin: 0 0 8px;
-  font-size: 1.1rem;
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 .output-section-desc {
   color: var(--muted-foreground);
-  font-size: 0.88rem;
-  margin: 0 0 20px;
+  font-size: 0.82rem;
+  margin: 0 0 14px;
 }
-.output-item {
-  padding: 16px 0;
-  border-top: 1px solid var(--border);
-}
-.output-item h3 {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-}
-.output-item p {
-  margin: 0 0 10px;
-  color: var(--muted-foreground);
-  font-size: 0.85rem;
-}
-.output-form {
+.output-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid oklch(0 0 0 / 0.08);
 }
-.output-form-wide { max-width: 100%; }
-.output-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.output-hint {
-  margin: 10px 0 0;
+.output-row-tall {
+  align-items: flex-start;
+}
+.output-row-info {
+  flex: 0 0 140px;
+  min-width: 120px;
+}
+.output-row-info h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.output-row-info p {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+.output-hint-inline {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.output-row-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.output-row-btns {
+  flex-wrap: nowrap;
+}
+.output-row-form {
+  flex-wrap: wrap;
+}
+.output-row-form-multi {
+  max-width: 100%;
+}
+.output-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.output-input {
+  padding: 6px 10px;
+  border: 1px solid oklch(0 0 0 / 0.2);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  background: var(--card);
+  max-width: 160px;
+}
+.output-input-sm {
+  max-width: 88px;
+}
+.output-sep {
   font-size: 0.82rem;
   color: var(--muted-foreground);
 }
+.output-section kbd {
+  padding: 2px 6px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--muted);
+}
 
-/* ── 인쇄 전용 페이지 ── */
-.print-page {
-  margin: 0;
-  padding: 16px 20px 40px;
+/* ── 인쇄 미리보기 전용 (/output/print/*) ── */
+body.print-page {
+  display: block;
+  min-height: auto;
+  overflow-x: auto;
   background: #fff;
-  color: #111;
   font-family: "Malgun Gothic", "DM Sans", sans-serif;
   font-size: 11px;
+  color: #111;
+}
+.print-page {
+  margin: 0;
+  padding: 12px 16px 32px;
+  max-width: 100%;
 }
 .print-toolbar {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: oklch(0.97 0.02 277);
+  border: 1px solid oklch(0 0 0 / 0.12);
+  border-radius: 8px;
 }
-.print-header { margin-bottom: 16px; }
+.print-toolbar-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.print-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.print-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.2;
+  border-radius: 6px;
+  border: 1px solid oklch(0 0 0 / 0.25);
+  background: #fff;
+  color: #111;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+button.print-btn {
+  margin: 0;
+}
+.print-btn:hover {
+  background: oklch(0.96 0.02 277);
+}
+.print-btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.print-btn-primary:hover {
+  background: var(--accent-hover);
+  color: #fff;
+}
+.print-header {
+  margin-bottom: 12px;
+}
 .print-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 .print-logo {
-  height: 48px;
+  height: 40px;
   width: auto;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 .print-header h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 .print-meta {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: #64748b;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
 .print-summary-row {
   display: flex;
@@ -914,6 +1026,23 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
 
 @media (max-width: 900px) {
   .output-grid { grid-template-columns: 1fr; }
+  .output-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .output-row-info { flex: none; }
+  .output-row-action { justify-content: flex-start; }
+}
+
+@media (max-width: 520px) {
+  .print-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .print-toolbar-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 768px) {
