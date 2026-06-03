@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from src.settings import load_dotenv
+from src.settings import is_production, load_dotenv
 from src.config_loader import ROOT_DIR, ensure_dirs, load_config, resolve_path
 from src.database import init_db
 from src.main import find_latest_xlsx
@@ -72,10 +72,12 @@ async def _lifespan(_app: FastAPI):
 
 app = FastAPI(title="모닝프레임 주문관리", version="1.0.0", lifespan=_lifespan)
 
+load_dotenv()
+
 _jinja = Environment(
     loader=FileSystemLoader(str(WEB_DIR / "templates")),
     autoescape=select_autoescape(["html"]),
-    cache_size=0,  # Python 3.14 + Jinja2 호환
+    cache_size=400 if is_production() else 0,
 )
 
 
@@ -84,8 +86,6 @@ def render(request: Request, template: str, context: dict) -> HTMLResponse:
     ctx = {"incomplete_count": 0, **context, "request": request}
     html = _jinja.get_template(template).render(**ctx)
     return HTMLResponse(html)
-
-load_dotenv()
 
 app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 _uploads = get_upload_dir()

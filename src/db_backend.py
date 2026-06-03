@@ -5,10 +5,15 @@ from __future__ import annotations
 import os
 import re
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any
 
 from src.config_loader import ROOT_DIR, load_config, resolve_path
+
+# Postgres 연결 풀 — 요청마다 SSL 핸드셰이크 방지 (Render↔Supabase 지연 완화)
+_pg_pool: Any = None
+_pg_pool_lock = threading.Lock()
 from src.settings import get_database_path
 
 
@@ -114,13 +119,19 @@ class CursorWrapper:
 class ConnectionWrapper:
     """SQLite / Postgres 통합 연결."""
 
-    def __init__(self, conn: Any, is_pg: bool) -> None:
+    def __init__(self, conn: Any, is_pg: bool, *, pooled: bool = False) -> None:
         self._conn = conn
         self._is_pg = is_pg
+        self._pooled = pooled
 
     def execute(self, sql: str, params: tuple | list = ()) -> CursorWrapper:
         sql = _adapt_sql(sql)
-        cur = self._conn.cursor()
+        if self._is_pg:
+            from psycopg2.extras import RealDictCursor
+
+            cur = self._conn.cursor(cursor_factory=RealDictCursor)
+        else:
+            cur = self._conn.cursor()
         cur.execute(sql, tuple(params))
         return CursorWrapper(cur, self._is_pg)
 
@@ -137,22 +148,45 @@ class ConnectionWrapper:
         self._conn.commit()
 
     def close(self) -> None:
-        self._conn.close()
+        if self._is_pg and self._pooled:
+            try:
+                self._conn.rollback()
+            except Exception:
+                pass
+            _pg_pool_put(self._conn)
+        else:
+            self._conn.close()
+
+
+def _pg_pool_get() -> Any:
+    """Thread-safe Postgres connection pool (lazy init)."""
+    global _pg_pool
+    if _pg_pool is not None:
+        return _pg_pool
+    with _pg_pool_lock:
+        if _pg_pool is None:
+            from psycopg2.pool import ThreadedConnectionPool
+
+            url = os.environ["DATABASE_URL"].strip()
+            _pg_pool = ThreadedConnectionPool(
+                minconn=1,
+                maxconn=5,
+                dsn=url,
+                connect_timeout=10,
+            )
+        return _pg_pool
+
+
+def _pg_pool_put(conn: Any) -> None:
+    pool = _pg_pool_get()
+    pool.putconn(conn)
 
 
 def connect() -> ConnectionWrapper:
     """DB 연결 — DATABASE_URL(Postgres) 또는 로컬 SQLite."""
     if is_postgres():
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-
-        url = os.environ["DATABASE_URL"].strip()
-        conn = psycopg2.connect(
-            url,
-            cursor_factory=RealDictCursor,
-            connect_timeout=10,
-        )
-        return ConnectionWrapper(conn, True)
+        raw = _pg_pool_get().getconn()
+        return ConnectionWrapper(raw, True, pooled=True)
 
     db_path = _sqlite_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)

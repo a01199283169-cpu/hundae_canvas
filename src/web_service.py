@@ -105,6 +105,22 @@ def _order_date_text_sql(alias: str = "o") -> str:
     return expr
 
 
+def _payment_completed_sql(alias: str = "") -> str:
+    """resolve_payment_status 와 동일한 '완료' 판정 SQL."""
+    p = f"{alias}." if alias else ""
+    ps, dd, pc = f"{p}payment_status", f"{p}deposit_date", f"{p}pay_card"
+    deposit_ok = (
+        f"({dd} IS NOT NULL AND TRIM(CAST({dd} AS TEXT)) != '')"
+        if is_postgres()
+        else f"TRIM(COALESCE({dd}, '')) != ''"
+    )
+    return (
+        f"({ps} = 'completed' OR "
+        f"({ps} IS NULL OR {ps} NOT IN ('completed', 'pending')) AND "
+        f"({deposit_ok} OR TRIM(COALESCE({pc}, '')) != ''))"
+    )
+
+
 def _build_settlement_where(
     *,
     period: str = "month",
@@ -554,24 +570,38 @@ def get_dashboard_stats() -> dict[str, Any]:
     conn = connect()
     date_expr = _order_date_sql(alias="")
     date_text = _order_date_text_sql(alias="")
-
-    total_orders = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
-    total_items = conn.execute("SELECT COUNT(*) FROM order_items").fetchone()[0]
-    total_sales = conn.execute("SELECT COALESCE(SUM(sales),0) FROM orders").fetchone()[0]
-    total_amount = conn.execute("SELECT COALESCE(SUM(total),0) FROM orders").fetchone()[0]
-    with_image = conn.execute(
-        f"SELECT COUNT(*) FROM orders WHERE {has_image_clause()}"
-    ).fetchone()[0]
-    platforms = conn.execute(
-        "SELECT COUNT(DISTINCT platform) FROM orders WHERE platform IS NOT NULL"
-    ).fetchone()[0]
     today = date.today().isoformat()
-    today_orders = conn.execute(
-        f"SELECT COUNT(*) FROM orders WHERE {date_expr} = ?",
-        (today,),
-    ).fetchone()[0]
+    img = has_image_clause()
+    pay_ok = _payment_completed_sql()
 
-    # 일별 추이 (최근 14일, ISO 날짜만)
+    # KPI·결제 — 1회 조회 (기존 10회+ → 4회)
+    summary = conn.execute(
+        f"""
+        SELECT
+            COUNT(*) AS total_orders,
+            (SELECT COUNT(*) FROM order_items) AS total_items,
+            COALESCE(SUM(sales), 0) AS total_sales,
+            COALESCE(SUM(total), 0) AS total_amount,
+            SUM(CASE WHEN {img} THEN 1 ELSE 0 END) AS with_image,
+            (SELECT COUNT(DISTINCT platform) FROM orders
+             WHERE platform IS NOT NULL AND TRIM(platform) != '') AS platform_count,
+            SUM(CASE WHEN {date_expr} = ? THEN 1 ELSE 0 END) AS today_orders,
+            SUM(CASE WHEN {pay_ok} THEN 1 ELSE 0 END) AS pay_completed,
+            SUM(CASE WHEN NOT ({pay_ok}) THEN 1 ELSE 0 END) AS pay_pending
+        FROM orders
+        """,
+        (today,),
+    ).fetchone()
+    total_orders = summary["total_orders"]
+    total_items = summary["total_items"]
+    total_sales = summary["total_sales"]
+    total_amount = summary["total_amount"]
+    with_image = summary["with_image"]
+    platforms = summary["platform_count"]
+    today_orders = summary["today_orders"]
+    pay_completed = summary["pay_completed"]
+    pay_pending = summary["pay_pending"]
+
     daily_rows = conn.execute(
         f"""
         SELECT {date_text} AS d, COUNT(*) AS cnt, COALESCE(SUM(total), 0) AS amt
@@ -611,21 +641,6 @@ def get_dashboard_stats() -> dict[str, Any]:
         """
     ).fetchall()
     month_rows = list(reversed(month_rows))
-
-    # 결제 완료 / 미결
-    pay_rows = conn.execute(
-        """
-        SELECT payment_status, deposit_date, pay_card FROM orders
-        """
-    ).fetchall()
-    pay_completed = 0
-    pay_pending = 0
-    for r in pay_rows:
-        row = dict(r)
-        if resolve_payment_status(row) == "completed":
-            pay_completed += 1
-        else:
-            pay_pending += 1
 
     conn.close()
 
@@ -903,9 +918,17 @@ def update_order_info(order_id: int, data: dict) -> None:
 
 def count_incomplete_orders() -> int:
     conn = connect()
-    rows = conn.execute("SELECT id, customer, phone, address, platform FROM orders").fetchall()
+    n = conn.execute(
+        """
+        SELECT COUNT(*) FROM orders
+        WHERE TRIM(COALESCE(customer, '')) = ''
+           OR TRIM(COALESCE(phone, '')) = ''
+           OR TRIM(COALESCE(address, '')) = ''
+           OR TRIM(COALESCE(platform, '')) = ''
+        """
+    ).fetchone()[0]
     conn.close()
-    return sum(1 for r in rows if not is_order_complete(dict(r)))
+    return int(n)
 
 
 def create_order_web(data: dict, items: list[dict]) -> int:
