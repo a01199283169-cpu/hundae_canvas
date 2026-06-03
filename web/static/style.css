@@ -642,7 +642,131 @@ tbody tr:hover { background: oklch(0.9789 0.0082 121.6272 / 0.6); }
   color: var(--primary);
 }
 
-/* 새 주문 등록 — 12열·필드별 너비 (span은 숫자 직접 지정, var() 미사용) */
+/* 새 주문 등록 — 엑셀 시트형 입력표 */
+.order-sheet-page { max-width: 100%; }
+.order-sheet-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.page-title-compact { margin-bottom: 0; font-size: 1.25rem; }
+.order-sheet-top-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.order-sheet-wrap {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+}
+.order-sheet-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8rem;
+}
+.order-sheet-table col.os-col-date { width: 9.5rem; }
+.order-sheet-table col.os-col-platform { width: 10rem; }
+.order-sheet-table col.os-col-text { width: 14%; }
+.order-sheet-table col.os-col-phone { width: 10.5rem; }
+.order-sheet-table col.os-col-num { width: 5.5rem; }
+.order-sheet-table col.os-col-pay { width: 6.5rem; }
+
+.order-sheet-table .os-section th {
+  background: oklch(0.88 0.1 277);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-align: left;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+}
+.order-sheet-table .os-labels th {
+  background: oklch(0.94 0.04 182);
+  font-weight: 600;
+  font-size: 0.76rem;
+  text-align: center;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  color: var(--foreground);
+}
+.order-sheet-table .os-labels th .req { color: var(--destructive); }
+.order-sheet-table .os-inputs td {
+  padding: 0;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  background: #fff;
+}
+.order-sheet-table .os-inputs td:empty,
+.order-sheet-table tr.os-inputs td[colspan]:only-child { background: #fff; }
+.order-sheet-table input,
+.order-sheet-table select,
+.order-sheet-table textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  padding: 5px 7px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  background: transparent;
+  box-sizing: border-box;
+}
+.order-sheet-table input:focus,
+.order-sheet-table select:focus,
+.order-sheet-table textarea:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  background: oklch(0.99 0.02 277);
+}
+.order-sheet-table input[type="date"] {
+  max-width: 9.5rem;
+}
+.order-sheet-table input[type="number"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.order-sheet-table .os-readonly {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  text-align: right;
+}
+.order-sheet-table textarea {
+  resize: vertical;
+  min-height: 1.75rem;
+  line-height: 1.35;
+}
+.order-sheet-table .os-inputs-file td {
+  padding: 4px 6px;
+}
+.order-sheet-table input[type="file"] {
+  font-size: 0.75rem;
+  padding: 2px 0;
+  width: auto;
+  max-width: 100%;
+}
+.order-sheet-table .os-thumb {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  max-height: 40px;
+  max-width: 52px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  object-fit: contain;
+}
+.order-sheet-table .os-thumb[hidden] { display: none !important; }
+
+/* (구) 그리드 폼 — 상세·기타 화면용 */
 .form-grid.form-grid-compact {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 8px 10px;
