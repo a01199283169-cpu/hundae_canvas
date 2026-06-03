@@ -147,7 +147,11 @@ def connect() -> ConnectionWrapper:
         from psycopg2.extras import RealDictCursor
 
         url = os.environ["DATABASE_URL"].strip()
-        conn = psycopg2.connect(url, cursor_factory=RealDictCursor)
+        conn = psycopg2.connect(
+            url,
+            cursor_factory=RealDictCursor,
+            connect_timeout=10,
+        )
         return ConnectionWrapper(conn, True)
 
     db_path = _sqlite_path()

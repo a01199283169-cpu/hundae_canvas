@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import uuid
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from src.settings import load_dotenv
-from src.config_loader import ROOT_DIR, ensure_dirs
+from src.config_loader import ROOT_DIR, ensure_dirs, load_config, resolve_path
 from src.database import init_db
 from src.main import find_latest_xlsx
 from src.parser import import_to_db
@@ -39,7 +40,37 @@ from src.web_service import (
 )
 
 WEB_DIR = ROOT_DIR / "web"
-app = FastAPI(title="모닝프레임 주문관리", version="1.0.0")
+
+_db_ready = False
+_db_error: str | None = None
+
+
+def _bootstrap_db() -> None:
+    """DB·폴더 초기화 — import 시점이 아니라 첫 요청 전 (Render 기동 대기 방지)."""
+    global _db_ready, _db_error
+    if _db_ready:
+        return
+    if _db_error:
+        raise RuntimeError(_db_error)
+    try:
+        init_db()
+        ensure_dirs()
+        catalog = resolve_path(load_config()["paths"]["price_catalog"])
+        if not catalog.exists():
+            create_price_catalog_template()
+        _db_ready = True
+    except Exception as exc:
+        _db_error = str(exc)
+        raise
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    load_dotenv()
+    yield
+
+
+app = FastAPI(title="모닝프레임 주문관리", version="1.0.0", lifespan=_lifespan)
 
 _jinja = Environment(
     loader=FileSystemLoader(str(WEB_DIR / "templates")),
@@ -54,11 +85,7 @@ def render(request: Request, template: str, context: dict) -> HTMLResponse:
     html = _jinja.get_template(template).render(**ctx)
     return HTMLResponse(html)
 
-# 앱 시작 시 환경변수·DB 초기화
 load_dotenv()
-init_db()
-ensure_dirs()
-create_price_catalog_template()
 
 app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 _uploads = get_upload_dir()
@@ -75,6 +102,19 @@ def _persist_upload(order_id: int, file: UploadFile) -> None:
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
     save_uploaded_image(order_id, dest, file.filename)
+
+
+@app.get("/healthz")
+async def healthz():
+    """Render 헬스체크 — DB 없이 즉시 응답."""
+    return {"status": "ok"}
+
+
+@app.middleware("http")
+async def bootstrap_middleware(request: Request, call_next):
+    if request.url.path not in ("/healthz", "/health"):
+        _bootstrap_db()
+    return await call_next(request)
 
 
 @app.get("/", response_class=HTMLResponse)
