@@ -11,6 +11,7 @@ from src.db_backend import (
     init_postgres_schema,
     insert_returning_id,
     is_postgres,
+    normalize_date,
     order_no_order,
 )
 from src.db_backend import Row  # noqa: F401 — 하위 호환
@@ -195,9 +196,9 @@ def upsert_order(conn: ConnectionWrapper, order: dict[str, Any], import_id: int)
             import_id,
             order["source_file"],
             order["sheet_name"],
-            order.get("sheet_date"),
+            normalize_date(order.get("sheet_date")),
             order["order_no"],
-            order.get("order_date"),
+            normalize_date(order.get("order_date")),
             order.get("platform"),
             order.get("file_ref"),
             order.get("customer"),
@@ -211,7 +212,7 @@ def upsert_order(conn: ConnectionWrapper, order: dict[str, Any], import_id: int)
             order.get("pay_transfer"),
             order.get("pay_bank"),
             order.get("remark"),
-            order.get("has_image", 0),
+            bool(order.get("has_image")) if is_postgres() else order.get("has_image", 0),
             order.get("order_qty"),
             order.get("expected_ship_type"),
             order.get("expected_freight"),

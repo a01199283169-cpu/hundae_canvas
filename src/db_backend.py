@@ -6,6 +6,7 @@ import os
 import re
 import sqlite3
 import threading
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,21 @@ def date_like_expr(expr: str) -> str:
 
 def order_no_order() -> str:
     return "CAST(order_no AS INTEGER)"
+
+
+def normalize_date(value: Any) -> str | None:
+    """SQLite(TEXT) / Postgres(DATE) 공통 — 빈 값·잘못된 형식은 NULL."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    text = str(value).strip()
+    if not text:
+        return None
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", text)
+    return m.group(1) if m else None
 
 
 class CursorWrapper:

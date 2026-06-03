@@ -7,6 +7,12 @@
   ⚠️ 기존 엑셀 주문내역서는 <strong>참고용</strong>입니다. Import 후에는 웹에서 주문을 관리하세요.
 </div>
 
+{% if error %}
+<div class="alert" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px">
+  ❌ Import 실패: {{ error }}
+</div>
+{% endif %}
+
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 
   <div class="card" style="padding:24px">

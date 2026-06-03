@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -54,8 +55,18 @@ class ColumnMap:
 def _cell_str(value: Any) -> str | None:
     if value is None:
         return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
     text = str(value).strip()
-    return text if text else None
+    if not text:
+        return None
+    # Postgres DATE 호환 — "2026-06-02 00:00:00" → "2026-06-02"
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", text)
+    if m:
+        return m.group(1)
+    return text
 
 
 def _cell_num(value: Any) -> float | None:

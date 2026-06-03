@@ -461,23 +461,35 @@ async def prices_validate():
 
 
 @app.get("/import", response_class=HTMLResponse)
-async def import_page(request: Request):
-    return render(request, "import.html", {"page": "import", "message": None})
+async def import_page(request: Request, err: str = ""):
+    return render(
+        request,
+        "import.html",
+        {"page": "import", "error": err or None},
+    )
 
 
 @app.post("/import/excel")
-async def import_excel(file: UploadFile = File(...)):
+async def import_excel(request: Request, file: UploadFile = File(...)):
     """참고용 엑셀 파일 일회 업로드 → DB 적재."""
-    upload_dir = ROOT_DIR / "data" / "imports"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    dest = upload_dir / (file.filename or "upload.xlsx")
-    with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
-    summary = import_to_db(dest)
-    return RedirectResponse(
-        f"/orders?msg=imported_{summary['total_orders']}",
-        status_code=303,
-    )
+    try:
+        upload_dir = ROOT_DIR / "data" / "imports"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        dest = upload_dir / (file.filename or "upload.xlsx")
+        with dest.open("wb") as f:
+            shutil.copyfileobj(file.file, f)
+        summary = import_to_db(dest)
+        return RedirectResponse(
+            f"/orders?msg=imported_{summary['total_orders']}",
+            status_code=303,
+        )
+    except Exception as exc:
+        return render(
+            request,
+            "import.html",
+            {"page": "import", "error": str(exc)},
+            status_code=500,
+        )
 
 
 @app.post("/import/local")
