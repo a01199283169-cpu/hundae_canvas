@@ -45,11 +45,13 @@
     <label class="filter-check">
       <input type="checkbox" name="incomplete" value="1" {% if incomplete_only %}checked{% endif %}> 누락만
     </label>
-    <button type="submit" class="btn btn-secondary">조회</button>
   </form>
-  <form method="post" action="/import/local" style="display:inline">
-    <button type="submit" class="btn btn-secondary">🔄 엑셀 동기화</button>
-  </form>
+  <div class="toolbar-btn-group" aria-label="조회·동기화">
+    <button type="submit" class="btn btn-secondary" form="orders-filter-form">조회</button>
+    <form method="post" action="/import/local" class="toolbar-inline-form">
+      <button type="submit" class="btn btn-secondary">🔄 엑셀 동기화</button>
+    </form>
+  </div>
   <div class="toolbar-actions">
     <a href="/output/print/orders?{{ query_string }}" target="_blank" class="btn btn-print">인쇄하기</a>
     <a href="/orders/new" class="btn btn-primary">+ 새 주문</a>

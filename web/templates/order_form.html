@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block main_class %}main-wide{% endblock %}
 {% block title %}주문 등록 - 모닝프레임{% endblock %}
 {% block content %}
 <h1 class="page-title">새 주문 등록</h1>
@@ -7,135 +8,137 @@
 <div class="alert alert-warn">⚠️ {{ error }}</div>
 {% endif %}
 
-<form method="post" action="/orders/new" class="form-grid" id="order-form" enctype="multipart/form-data">
+<form method="post" action="/orders/new" class="form-grid form-grid-compact" id="order-form" enctype="multipart/form-data">
   <div class="form-section-title">📋 주문 정보 (필수)</div>
 
-  <div class="form-group">
+  <div class="form-group col-2 fg-fit fg-date">
     <label>주문일 *</label>
     <input type="date" name="sheet_date" value="{{ form.sheet_date or today }}" required>
   </div>
-  <div class="form-group">
+  <div class="form-group col-3">
     <label>플랫폼(구분) *</label>
     <input type="text" name="platform" list="platform-list" required
-           value="{{ form.platform or '' }}" placeholder="예: 쿠팡, SMT모닝">
+           value="{{ form.platform or '' }}" placeholder="쿠팡, SMT모닝">
     <datalist id="platform-list">
       {% for p in platforms %}<option value="{{ p }}">{% endfor %}
     </datalist>
   </div>
-  <div class="form-group">
+  <div class="form-group col-4">
     <label>주문자 *</label>
-    <input type="text" name="customer" required value="{{ form.customer or '' }}" placeholder="실명 입력">
+    <input type="text" name="customer" required value="{{ form.customer or '' }}" placeholder="실명">
   </div>
-  <div class="form-group">
+  <div class="form-group col-3 fg-fit fg-phone">
     <label>연락처 *</label>
     <input type="tel" name="phone" required value="{{ form.phone or '' }}" placeholder="010-0000-0000">
   </div>
-  <div class="form-group full">
+  <div class="form-group col-12">
     <label>배송 주소 *</label>
-    <textarea name="address" rows="3" required placeholder="우편번호 포함 전체 주소">{{ form.address or '' }}</textarea>
+    <textarea name="address" rows="2" required placeholder="우편번호 포함 전체 주소">{{ form.address or '' }}</textarea>
   </div>
 
-  <div class="form-section-title">💰 금액 (엑셀 양식)</div>
-  <div class="form-group">
-    <label>단가 (플랫폼 공개단가) *</label>
+  <div class="form-section-title">💰 금액</div>
+  <div class="form-group col-2 fg-fit fg-money">
+    <label>단가 *</label>
     <input type="number" name="unit_price" id="unit_price" min="0" required value="{{ form.unit_price or '' }}">
   </div>
-  <div class="form-group">
+  <div class="form-group col-1 fg-fit fg-num">
     <label>수량 *</label>
     <input type="number" name="qty" id="qty" value="{{ form.qty or 1 }}" min="1" required>
   </div>
-  <div class="form-group">
-    <label>판매가 (단가×수량)</label>
-    <input type="number" name="sales" id="sales" value="{{ form.sales or '' }}" step="1" readonly style="background:#f8fafc">
+  <div class="form-group col-2 fg-fit fg-money">
+    <label>판매가</label>
+    <input type="number" name="sales" id="sales" value="{{ form.sales or '' }}" step="1" readonly class="form-readonly" title="단가×수량">
   </div>
-  <div class="form-group">
-    <label>주문 수량</label>
+  <div class="form-group col-1 fg-fit fg-num">
+    <label>주문수량</label>
     <input type="number" name="order_qty" id="order_qty" value="{{ form.order_qty or form.qty or 1 }}" step="1" min="0">
   </div>
-  <div class="form-group">
+  <div class="form-group col-2 fg-fit fg-money">
     <label>공제액</label>
     <input type="number" name="deduct" id="deduct" value="{{ form.deduct or 0 }}" step="1">
   </div>
-  <div class="form-group">
+  <div class="form-group col-1 fg-fit fg-money">
     <label>택배비</label>
     <input type="number" name="ship" id="ship" value="{{ form.ship or 0 }}" min="0" step="1">
   </div>
-  <div class="form-group">
-    <label>합계금액</label>
-    <input type="text" id="total_display" readonly value="0원" style="background:#f8fafc">
+  <div class="form-group col-1 fg-fit fg-money">
+    <label>합계</label>
+    <input type="text" id="total_display" readonly class="form-readonly" value="0원">
   </div>
-  <div class="form-group">
+  <div class="form-group col-2 fg-fit fg-pay">
     <label>결제수단 *</label>
     <select name="pay_method" required>
-      <option value="">선택하세요</option>
+      <option value="">선택</option>
       <option value="card" {% if form.pay_method=='card' %}selected{% endif %}>카드</option>
-      <option value="transfer" {% if form.pay_method=='transfer' %}selected{% endif %}>계좌이체</option>
+      <option value="transfer" {% if form.pay_method=='transfer' %}selected{% endif %}>계좌</option>
       <option value="bank" {% if form.pay_method=='bank' %}selected{% endif %}>무통장</option>
     </select>
   </div>
-  <div class="form-group full">
-    <label>액자 이미지 삽입</label>
-    <input type="file" name="image_file" id="image_file" accept="image/*">
-    <small style="color:#64748b;font-size:0.78rem">JPG, PNG 등 이미지 파일을 선택하면 주문 저장 후 목록에 표시됩니다.</small>
-    <img id="image_preview" class="img-preview" alt="미리보기" style="display:none;margin-top:10px;max-height:120px">
+
+  <div class="form-group col-4">
+    <label>액자 이미지</label>
+    <div class="form-file-row">
+      <input type="file" name="image_file" id="image_file" accept="image/*">
+      <img id="image_preview" class="img-preview img-preview-inline" alt="" hidden>
+    </div>
+    <small class="form-hint">JPG·PNG</small>
   </div>
-  <div class="form-group full">
+  <div class="form-group col-8">
     <label>비고</label>
     <input type="text" name="remark" value="{{ form.remark or '' }}">
   </div>
 
   <div class="form-section-title">📦 예상출고</div>
-  <div class="form-group">
+  <div class="form-group col-3">
     <label>타입</label>
     <input type="text" name="expected_ship_type" value="{{ form.expected_ship_type or '' }}">
   </div>
-  <div class="form-group">
+  <div class="form-group col-3">
     <label>운임비</label>
     <input type="text" name="expected_freight" value="{{ form.expected_freight or '' }}">
   </div>
-  <div class="form-group">
+  <div class="form-group col-1 fg-fit fg-num">
     <label>수량</label>
     <input type="number" name="expected_ship_qty" value="{{ form.expected_ship_qty or '' }}" step="1" min="0">
   </div>
 
   <div class="form-section-title">🖼 액자 상세 (생산 스펙)</div>
-
-  <div class="form-group">
-    <label>프레임 종류 *</label>
-    <input type="text" name="frame" required value="{{ form.frame or '' }}" placeholder="A, W, C, 박스, 유화...">
+  <div class="form-group col-2">
+    <label>프레임 *</label>
+    <input type="text" name="frame" required value="{{ form.frame or '' }}" placeholder="A,W,C">
   </div>
-  <div class="form-group">
+  <div class="form-group col-2">
     <label>호칭/규격 *</label>
-    <input type="text" name="size" required value="{{ form.size or '' }}" placeholder="8F, A3, 57...">
+    <input type="text" name="size" required value="{{ form.size or '' }}" placeholder="8F,A3">
   </div>
-  <div class="form-group">
-    <label>가로 (mm) *</label>
+  <div class="form-group col-1 fg-fit fg-num">
+    <label>가로mm *</label>
     <input type="number" name="width" min="1" required value="{{ form.width or '' }}">
   </div>
-  <div class="form-group">
-    <label>세로 (mm) *</label>
+  <div class="form-group col-1 fg-fit fg-num">
+    <label>세로mm *</label>
     <input type="number" name="height" min="1" required value="{{ form.height or '' }}">
   </div>
-  <div class="form-group">
+  <div class="form-group col-2">
     <label>색상</label>
     <input type="text" name="color" value="{{ form.color or '' }}">
   </div>
-  <div class="form-group">
+  <div class="form-group col-2">
     <label>알판</label>
     <input type="text" name="plate" value="{{ form.plate or '' }}">
   </div>
-  <div class="form-group">
+  <div class="form-group col-2">
     <label>아크릴</label>
     <input type="text" name="acrylic" value="{{ form.acrylic or '' }}">
   </div>
-  <div class="form-group">
+  <div class="form-group col-2">
     <label>고리</label>
     <input type="text" name="hook" value="{{ form.hook or '' }}">
   </div>
 
-  <div class="form-group full" style="margin-top:8px">
+  <div class="form-group col-12 form-actions">
     <button type="submit" class="btn btn-primary">주문 저장</button>
-    <a href="/orders" class="btn btn-secondary" style="margin-left:8px">취소</a>
+    <a href="/orders" class="btn btn-secondary">취소</a>
   </div>
 </form>
 
@@ -148,6 +151,7 @@
   const ship = document.getElementById('ship');
   const deduct = document.getElementById('deduct');
   const totalDisplay = document.getElementById('total_display');
+  const preview = document.getElementById('image_preview');
 
   function refreshAmounts() {
     const q = parseFloat(qty.value) || 0;
@@ -163,17 +167,15 @@
   [unitPrice, qty, ship, deduct].forEach(el => el.addEventListener('input', refreshAmounts));
   refreshAmounts();
 
-  const fileInput = document.getElementById('image_file');
-  const preview = document.getElementById('image_preview');
-  fileInput.addEventListener('change', () => {
-    const file = fileInput.files && fileInput.files[0];
+  document.getElementById('image_file').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
     if (!file) {
-      preview.style.display = 'none';
-      preview.src = '';
+      preview.hidden = true;
+      preview.removeAttribute('src');
       return;
     }
     preview.src = URL.createObjectURL(file);
-    preview.style.display = 'block';
+    preview.hidden = false;
   });
 })();
 </script>
