@@ -116,6 +116,9 @@
   const palette = [colors.primary, colors.secondary, colors.accent, colors.chart4, colors.chart5,
     'oklch(0.85 0.12 277)', 'oklch(0.80 0.10 182)', 'oklch(0.88 0.14 70)'];
 
+  /* oklch + '22' 같은 잘못된 합치기는 Chart.js에서 검정으로 보임 → / alpha 사용 */
+  const withAlpha = (c, a) => c.replace(/\)\s*$/, ' / ' + a + ')');
+
   const fontFamily = '"DM Sans", "Malgun Gothic", sans-serif';
   Chart.defaults.font.family = fontFamily;
   Chart.defaults.color = 'oklch(0.3211 0 0)';
@@ -133,7 +136,7 @@
           {
             label: '주문(건)',
             data: C.daily_orders,
-            backgroundColor: colors.secondary + '99',
+            backgroundColor: withAlpha(colors.secondary, 0.55),
             borderColor: colors.secondary,
             borderWidth: 2,
             borderRadius: 6,
@@ -145,7 +148,7 @@
             data: C.daily_sales,
             type: 'line',
             borderColor: colors.primary,
-            backgroundColor: colors.primary + '22',
+            backgroundColor: withAlpha(colors.primary, 0.18),
             borderWidth: 3,
             pointRadius: 4,
             pointBackgroundColor: colors.primary,
@@ -195,7 +198,7 @@
         datasets: [{
           label: '합계금액',
           data: C.month_sales,
-          backgroundColor: palette.map((c) => c + 'bb'),
+          backgroundColor: palette.map((c) => withAlpha(c, 0.72)),
           borderColor: palette,
           borderWidth: 2,
           borderRadius: 8,
