@@ -419,7 +419,6 @@ def get_settlement_data(
     payment_status: str | None = None,
 ) -> dict[str, Any]:
     """매출현황 조회 — 일자별 집계 + 주문 상세 + 합계."""
-    conn = connect()
     where, params = _build_settlement_where(
         period=period,
         day=day,
@@ -432,20 +431,20 @@ def get_settlement_data(
     where_sql = " AND ".join(where) if where else "1=1"
     date_expr = _order_date_sql()
 
-    rows = conn.execute(
-        f"""
-        SELECT o.*,
-               (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS item_count
-        FROM orders o
-        WHERE {where_sql}
-        ORDER BY {date_expr}, CAST(o.order_no AS INTEGER)
-        """,
-        params,
-    ).fetchall()
+    with connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT o.*,
+                   (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS item_count
+            FROM orders o
+            WHERE {where_sql}
+            ORDER BY {date_expr}, CAST(o.order_no AS INTEGER)
+            """,
+            params,
+        ).fetchall()
 
-    orders = [dict(r) for r in rows]
-    _attach_first_items(conn, orders)
-    conn.close()
+        orders = [dict(r) for r in rows]
+        _attach_first_items(conn, orders)
 
     for o in orders:
         o["payment_label"] = format_payment(o)
@@ -567,82 +566,83 @@ def _attach_thumbnails(conn, orders: list[dict]) -> None:
 
 def get_dashboard_stats() -> dict[str, Any]:
     """대시보드 요약 통계 + 차트용 데이터."""
-    conn = connect()
     date_expr = _order_date_sql(alias="")
     date_text = _order_date_text_sql(alias="")
     today = date.today().isoformat()
     img = has_image_clause()
     pay_ok = _payment_completed_sql()
 
-    # KPI·결제 — 1회 조회 (기존 10회+ → 4회)
-    summary = conn.execute(
-        f"""
-        SELECT
-            COUNT(*) AS total_orders,
-            (SELECT COUNT(*) FROM order_items) AS total_items,
-            COALESCE(SUM(sales), 0) AS total_sales,
-            COALESCE(SUM(total), 0) AS total_amount,
-            SUM(CASE WHEN {img} THEN 1 ELSE 0 END) AS with_image,
-            (SELECT COUNT(DISTINCT platform) FROM orders
-             WHERE platform IS NOT NULL AND TRIM(platform) != '') AS platform_count,
-            SUM(CASE WHEN {date_expr} = ? THEN 1 ELSE 0 END) AS today_orders,
-            SUM(CASE WHEN {pay_ok} THEN 1 ELSE 0 END) AS pay_completed,
-            SUM(CASE WHEN NOT ({pay_ok}) THEN 1 ELSE 0 END) AS pay_pending
-        FROM orders
-        """,
-        (today,),
-    ).fetchone()
-    total_orders = summary["total_orders"]
-    total_items = summary["total_items"]
-    total_sales = summary["total_sales"]
-    total_amount = summary["total_amount"]
-    with_image = summary["with_image"]
-    platforms = summary["platform_count"]
-    today_orders = summary["today_orders"]
-    pay_completed = summary["pay_completed"]
-    pay_pending = summary["pay_pending"]
+    with connect() as conn:
+        summary = conn.execute(
+            f"""
+            SELECT
+                COUNT(*) AS total_orders,
+                (SELECT COUNT(*) FROM order_items) AS total_items,
+                COALESCE(SUM(sales), 0) AS total_sales,
+                COALESCE(SUM(total), 0) AS total_amount,
+                SUM(CASE WHEN {img} THEN 1 ELSE 0 END) AS with_image,
+                (SELECT COUNT(DISTINCT platform) FROM orders
+                 WHERE platform IS NOT NULL AND TRIM(platform) != '') AS platform_count,
+                SUM(CASE WHEN {date_expr} = ? THEN 1 ELSE 0 END) AS today_orders,
+                SUM(CASE WHEN {pay_ok} THEN 1 ELSE 0 END) AS pay_completed,
+                SUM(CASE WHEN NOT ({pay_ok}) THEN 1 ELSE 0 END) AS pay_pending
+            FROM orders
+            """,
+            (today,),
+        ).fetchone()
+        total_orders = summary["total_orders"]
+        total_items = summary["total_items"]
+        total_sales = summary["total_sales"]
+        total_amount = summary["total_amount"]
+        with_image = summary["with_image"]
+        platforms = summary["platform_count"]
+        today_orders = summary["today_orders"]
+        pay_completed = summary["pay_completed"]
+        pay_pending = summary["pay_pending"]
 
-    daily_rows = conn.execute(
-        f"""
-        SELECT {date_text} AS d, COUNT(*) AS cnt, COALESCE(SUM(total), 0) AS amt
-        FROM orders
-        WHERE {date_text} GLOB '????-??-??'
-        GROUP BY d
-        ORDER BY d DESC
-        LIMIT 14
-        """
-    ).fetchall()
-    daily_rows = list(reversed(daily_rows))
+        daily_rows = list(
+            reversed(
+                conn.execute(
+                    f"""
+                    SELECT {date_text} AS d, COUNT(*) AS cnt, COALESCE(SUM(total), 0) AS amt
+                    FROM orders
+                    WHERE {date_text} GLOB '????-??-??'
+                    GROUP BY d
+                    ORDER BY d DESC
+                    LIMIT 14
+                    """
+                ).fetchall()
+            )
+        )
 
-    # 구분(플랫폼)별
-    platform_rows = conn.execute(
-        """
-        SELECT COALESCE(platform, '(미분류)') AS p,
-               COUNT(*) AS cnt,
-               COALESCE(SUM(total), 0) AS amt
-        FROM orders
-        GROUP BY p
-        ORDER BY cnt DESC
-        LIMIT 8
-        """
-    ).fetchall()
+        platform_rows = conn.execute(
+            """
+            SELECT COALESCE(platform, '(미분류)') AS p,
+                   COUNT(*) AS cnt,
+                   COALESCE(SUM(total), 0) AS amt
+            FROM orders
+            GROUP BY p
+            ORDER BY cnt DESC
+            LIMIT 8
+            """
+        ).fetchall()
 
-    # 월별 매출
-    month_rows = conn.execute(
-        f"""
-        SELECT substr({date_text}, 1, 7) AS m,
-               COUNT(*) AS cnt,
-               COALESCE(SUM(total), 0) AS amt
-        FROM orders
-        WHERE {date_text} GLOB '????-??-??'
-        GROUP BY m
-        ORDER BY m DESC
-        LIMIT 6
-        """
-    ).fetchall()
-    month_rows = list(reversed(month_rows))
-
-    conn.close()
+        month_rows = list(
+            reversed(
+                conn.execute(
+                    f"""
+                    SELECT substr({date_text}, 1, 7) AS m,
+                           COUNT(*) AS cnt,
+                           COALESCE(SUM(total), 0) AS amt
+                    FROM orders
+                    WHERE {date_text} GLOB '????-??-??'
+                    GROUP BY m
+                    ORDER BY m DESC
+                    LIMIT 6
+                    """
+                ).fetchall()
+            )
+        )
 
     def _fmt_day(d: str) -> str:
         return d[5:] if len(d) >= 10 else d
@@ -693,7 +693,6 @@ def list_orders(
     expand_items: bool = True,
 ) -> tuple[list[dict], int]:
     """주문 목록 — expand_items=True 이면 엑셀처럼 품목별 1행."""
-    conn = connect()
     date_where, params = _build_settlement_where(
         period=period,
         day=day,
@@ -709,54 +708,54 @@ def list_orders(
 
     where_sql = " AND ".join(where)
 
-    if expand_items:
-        rows = conn.execute(
-            f"""
-            SELECT o.*,
-                   oi.line_no,
-                   oi.frame AS item_frame,
-                   oi.size AS item_size,
-                   oi.width AS item_width,
-                   oi.height AS item_height,
-                   oi.color AS item_color,
-                   oi.plate AS item_plate,
-                   oi.acrylic AS item_acrylic,
-                   oi.hook AS item_hook,
-                   oi.item_note,
-                   oi.qty AS item_qty,
-                   oi.unit_price,
-                   (SELECT COUNT(*) FROM order_items x WHERE x.order_id = o.id) AS item_count
-            FROM orders o
-            INNER JOIN order_items oi ON oi.order_id = o.id
-            WHERE {where_sql}
-            ORDER BY o.sheet_date DESC, CAST(o.order_no AS INTEGER) DESC, oi.line_no
-            """,
-            params,
-        ).fetchall()
-        orders = [dict(r) for r in rows]
-        for o in orders:
-            o["is_first_line"] = int(o.get("line_no") or 1) == 1
-            o["line_sales"] = (float(o.get("unit_price") or 0) * float(o.get("item_qty") or 0)) or None
-            o["item_extra"] = ""
-            o["payment_label"] = format_payment(o)
-            o["expected_ship_label"] = format_expected_ship(o)
-    else:
-        rows = conn.execute(
-            f"""
-            SELECT o.*,
-                   (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id) AS item_count
-            FROM orders o
-            WHERE {where_sql}
-            ORDER BY o.sheet_date DESC, CAST(o.order_no AS INTEGER) DESC
-            """,
-            params,
-        ).fetchall()
-        orders = [dict(r) for r in rows]
-        _attach_first_items(conn, orders)
+    with connect() as conn:
+        if expand_items:
+            rows = conn.execute(
+                f"""
+                SELECT o.*,
+                       oi.line_no,
+                       oi.frame AS item_frame,
+                       oi.size AS item_size,
+                       oi.width AS item_width,
+                       oi.height AS item_height,
+                       oi.color AS item_color,
+                       oi.plate AS item_plate,
+                       oi.acrylic AS item_acrylic,
+                       oi.hook AS item_hook,
+                       oi.item_note,
+                       oi.qty AS item_qty,
+                       oi.unit_price,
+                       (SELECT COUNT(*) FROM order_items x WHERE x.order_id = o.id) AS item_count
+                FROM orders o
+                INNER JOIN order_items oi ON oi.order_id = o.id
+                WHERE {where_sql}
+                ORDER BY o.sheet_date DESC, CAST(o.order_no AS INTEGER) DESC, oi.line_no
+                """,
+                params,
+            ).fetchall()
+            orders = [dict(r) for r in rows]
+            for o in orders:
+                o["is_first_line"] = int(o.get("line_no") or 1) == 1
+                o["line_sales"] = (float(o.get("unit_price") or 0) * float(o.get("item_qty") or 0)) or None
+                o["item_extra"] = ""
+                o["payment_label"] = format_payment(o)
+                o["expected_ship_label"] = format_expected_ship(o)
+        else:
+            rows = conn.execute(
+                f"""
+                SELECT o.*,
+                       (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id) AS item_count
+                FROM orders o
+                WHERE {where_sql}
+                ORDER BY o.sheet_date DESC, CAST(o.order_no AS INTEGER) DESC
+                """,
+                params,
+            ).fetchall()
+            orders = [dict(r) for r in rows]
+            _attach_first_items(conn, orders)
 
-    _attach_thumbnails(conn, orders)
+        _attach_thumbnails(conn, orders)
 
-    # 주문 단위 완료 여부
     seen: dict[int, bool] = {}
     for o in orders:
         oid = o["id"]
@@ -772,7 +771,6 @@ def list_orders(
 
     order_count = len({o["id"] for o in orders})
     orders = orders[offset : offset + limit]
-    conn.close()
     return orders, order_count
 
 
@@ -917,17 +915,16 @@ def update_order_info(order_id: int, data: dict) -> None:
 
 
 def count_incomplete_orders() -> int:
-    conn = connect()
-    n = conn.execute(
-        """
-        SELECT COUNT(*) FROM orders
-        WHERE TRIM(COALESCE(customer, '')) = ''
-           OR TRIM(COALESCE(phone, '')) = ''
-           OR TRIM(COALESCE(address, '')) = ''
-           OR TRIM(COALESCE(platform, '')) = ''
-        """
-    ).fetchone()[0]
-    conn.close()
+    with connect() as conn:
+        n = conn.execute(
+            """
+            SELECT COUNT(*) FROM orders
+            WHERE TRIM(COALESCE(customer, '')) = ''
+               OR TRIM(COALESCE(phone, '')) = ''
+               OR TRIM(COALESCE(address, '')) = ''
+               OR TRIM(COALESCE(platform, '')) = ''
+            """
+        ).fetchone()[0]
     return int(n)
 
 

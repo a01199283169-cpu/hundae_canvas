@@ -163,6 +163,12 @@ class ConnectionWrapper:
     def commit(self) -> None:
         self._conn.commit()
 
+    def __enter__(self) -> ConnectionWrapper:
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        self.close()
+
     def close(self) -> None:
         if self._is_pg and self._pooled:
             try:

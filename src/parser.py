@@ -408,28 +408,27 @@ def parse_workbook(xlsx_path: Path) -> dict[str, list[dict]]:
 
 
 def import_to_db(xlsx_path: Path) -> dict[str, Any]:
-    """엑셀 파싱 후 SQLite 적재."""
+    """엑셀 파싱 후 DB 적재."""
     init_db()
-    conn = connect()
     parsed = parse_workbook(xlsx_path)
     summary = {"sheets": {}, "total_orders": 0, "total_items": 0}
 
-    for sheet_name, orders in parsed.items():
-        import_id = insert_import_log(
-            conn,
-            xlsx_path.name,
-            sheet_name,
-            len(orders),
-            sum(len(o["items"]) for o in orders),
-        )
-        for order in orders:
-            upsert_order(conn, order, import_id)
+    with connect() as conn:
+        for sheet_name, orders in parsed.items():
+            import_id = insert_import_log(
+                conn,
+                xlsx_path.name,
+                sheet_name,
+                len(orders),
+                sum(len(o["items"]) for o in orders),
+            )
+            for order in orders:
+                upsert_order(conn, order, import_id)
 
-        item_count = sum(len(o["items"]) for o in orders)
-        summary["sheets"][sheet_name] = {"orders": len(orders), "items": item_count}
-        summary["total_orders"] += len(orders)
-        summary["total_items"] += item_count
+            item_count = sum(len(o["items"]) for o in orders)
+            summary["sheets"][sheet_name] = {"orders": len(orders), "items": item_count}
+            summary["total_orders"] += len(orders)
+            summary["total_items"] += item_count
 
-    conn.close()
     summary["source_file"] = xlsx_path.name
     return summary
