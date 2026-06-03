@@ -18,44 +18,43 @@
   <form method="post" action="/orders/new" id="order-form" enctype="multipart/form-data">
   <div class="order-sheet-wrap">
   <table class="order-sheet-table">
-    {# 27 columns — 데이터 길이 기준 너비 #}
+    {# 27 cols: 날짜·구분·파일·수량·주문자·연락처·주소·단가·수량·판매가·공제·택배·합계 → [액자상세 9cols] → 결제·비고·예상출고 3cols #}
     <colgroup>
-      <col style="width:9.2rem">   {# 날짜 YYYY-MM-DD #}
-      <col style="width:7rem">     {# 구분/플랫폼 #}
-      <col style="width:3.6rem">   {# 파일(이미지) #}
-      <col style="width:4.2rem">   {# 프레임 A/W/C #}
-      <col style="width:4rem">     {# 호칭 8F/A3 #}
-      <col style="width:4rem">     {# 가로mm #}
-      <col style="width:4rem">     {# 세로mm #}
-      <col style="width:4.5rem">   {# 색상 #}
-      <col style="width:3.5rem">   {# 알판 #}
-      <col style="width:3.5rem">   {# 아크릴 #}
-      <col style="width:3.5rem">   {# 고리 #}
-      <col style="width:6rem">     {# 상세비고 #}
+      <col style="width:9.2rem">   {# 날짜 #}
+      <col style="width:7rem">     {# 구분 #}
+      <col style="width:3.6rem">   {# 파일 #}
       <col style="width:3.5rem">   {# 수량(아이템) #}
       <col style="width:5.5rem">   {# 주문자 #}
-      <col style="width:8.5rem">   {# 연락처 010-0000-0000 #}
-      <col style="width:15rem">    {# 주소 (가장 긴 필드) #}
+      <col style="width:8.5rem">   {# 연락처 #}
+      <col style="width:15rem">    {# 주소 #}
       <col style="width:5.5rem">   {# 단가 #}
       <col style="width:3.5rem">   {# 수량(주문) #}
       <col style="width:5.5rem">   {# 판매가 #}
       <col style="width:4.5rem">   {# 공제액 #}
       <col style="width:4.5rem">   {# 택배비 #}
       <col style="width:5.8rem">   {# 합계금액 #}
+      <col style="width:4.2rem">   {# 프레임 #}
+      <col style="width:4rem">     {# 호칭 #}
+      <col style="width:4rem">     {# 가로mm #}
+      <col style="width:4rem">     {# 세로mm #}
+      <col style="width:4.5rem">   {# 색상 #}
+      <col style="width:3.5rem">   {# 알판 #}
+      <col style="width:3.5rem">   {# 아크릴 #}
+      <col style="width:3.5rem">   {# 고리 #}
+      <col style="width:5.5rem">   {# 상세비고 #}
       <col style="width:5rem">     {# 결제수단 #}
       <col style="width:6.5rem">   {# 비고 #}
-      <col style="width:5rem">     {# 예상출고 타입 #}
+      <col style="width:5rem">     {# 타입 #}
       <col style="width:4.5rem">   {# 운임비 #}
       <col style="width:3.5rem">   {# 출고수량 #}
     </colgroup>
 
     <thead>
-      {# 1행: 주요 그룹 #}
+      {# 1행 #}
       <tr class="hdr-row hdr-row-1">
         <th rowspan="3">날짜<span class="req">*</span></th>
         <th rowspan="3">구분<span class="req">*</span></th>
         <th rowspan="3">파일</th>
-        <th colspan="9" class="hdr-group hdr-detail">상세내역</th>
         <th rowspan="3">수량</th>
         <th rowspan="3">주문자<span class="req">*</span></th>
         <th rowspan="3">연락처<span class="req">*</span></th>
@@ -66,11 +65,12 @@
         <th rowspan="3">공제액</th>
         <th rowspan="3">택배비</th>
         <th rowspan="3">합계금액</th>
+        <th colspan="9" class="hdr-group hdr-detail">액자 상세내역</th>
         <th rowspan="3">결제<span class="req">*</span></th>
         <th rowspan="3">비고</th>
         <th colspan="3" class="hdr-group">예상출고</th>
       </tr>
-      {# 2행: 상세내역 하위 #}
+      {# 2행 #}
       <tr class="hdr-row hdr-row-2">
         <th rowspan="2">프레임<span class="req">*</span></th>
         <th colspan="3" class="hdr-spec-group">규격 (mm)</th>
@@ -83,7 +83,7 @@
         <th rowspan="2">운임비</th>
         <th rowspan="2">수량</th>
       </tr>
-      {# 3행: 규격 하위 #}
+      {# 3행 #}
       <tr class="hdr-row hdr-row-3">
         <th>호칭<span class="req">*</span></th>
         <th>가로<span class="req">*</span></th>
@@ -92,7 +92,7 @@
     </thead>
 
     <tbody>
-      {# 주소: 별도 행 (입력란이 가장 넓어 다른 셀들과 높이가 안 맞으므로 위에 별도 표시) #}
+      {# 주소 입력 — 전체 너비 별도 행 #}
       <tr class="os-addr-row">
         <td colspan="27">
           <div class="os-addr-wrap">
@@ -105,9 +105,9 @@
 
       {# 메인 입력 행 #}
       <tr class="os-input-row">
-        {# 날짜 #}
+        {# 1. 날짜 #}
         <td><input type="date" name="sheet_date" value="{{ form.sheet_date or today }}" required></td>
-        {# 구분 #}
+        {# 2. 구분 #}
         <td>
           <input type="text" name="platform" list="platform-list" required
                  value="{{ form.platform or '' }}" placeholder="쿠팡">
@@ -115,15 +115,29 @@
             {% for p in platforms %}<option value="{{ p }}">{% endfor %}
           </datalist>
         </td>
-        {# 파일 #}
+        {# 3. 파일 #}
         <td class="os-td-file">
           <label class="os-file-btn" title="이미지 선택">
-            📷
-            <input type="file" name="image_file" id="image_file" accept="image/*" hidden>
+            📷<input type="file" name="image_file" id="image_file" accept="image/*" hidden>
           </label>
           <img id="image_preview" class="os-thumb" alt="" hidden>
         </td>
-        {# 상세내역 #}
+        {# 4. 수량(아이템) #}
+        <td><input type="number" name="qty" id="qty" value="{{ form.qty or 1 }}" min="1" required class="os-num"></td>
+        {# 5. 주문자 #}
+        <td><input type="text" name="customer" required value="{{ form.customer or '' }}" placeholder="실명"></td>
+        {# 6. 연락처 #}
+        <td><input type="tel" name="phone" required value="{{ form.phone or '' }}" placeholder="010-1234-5678"></td>
+        {# 7. 주소(미리보기) #}
+        <td class="os-td-addr"><span class="os-addr-display">{{ form.address or '↑ 위에서 입력' }}</span></td>
+        {# 8~13. 금액 #}
+        <td><input type="number" name="unit_price" id="unit_price" min="0" required value="{{ form.unit_price or '' }}" class="os-num"></td>
+        <td><input type="number" name="order_qty" id="order_qty" value="{{ form.order_qty or form.qty or 1 }}" min="0" class="os-num"></td>
+        <td><input type="number" name="sales" id="sales" value="{{ form.sales or '' }}" step="1" readonly class="os-num os-readonly"></td>
+        <td><input type="number" name="deduct" id="deduct" value="{{ form.deduct or 0 }}" step="1" class="os-num"></td>
+        <td><input type="number" name="ship" id="ship" value="{{ form.ship or 0 }}" min="0" step="1" class="os-num"></td>
+        <td><input type="text" id="total_display" readonly class="os-num os-readonly" value="0원"></td>
+        {# 14~22. 액자 상세내역 #}
         <td><input type="text" name="frame" required value="{{ form.frame or '' }}" placeholder="A"></td>
         <td><input type="text" name="size" required value="{{ form.size or '' }}" placeholder="8F"></td>
         <td><input type="number" name="width" min="1" required value="{{ form.width or '' }}" class="os-num"></td>
@@ -133,20 +147,7 @@
         <td><input type="text" name="acrylic" value="{{ form.acrylic or '' }}"></td>
         <td><input type="text" name="hook" value="{{ form.hook or '' }}"></td>
         <td><input type="text" name="item_note" value="{{ form.item_note or '' }}"></td>
-        {# 수량(아이템) #}
-        <td><input type="number" name="qty" id="qty" value="{{ form.qty or 1 }}" min="1" required class="os-num"></td>
-        {# 주문자·연락처·주소 #}
-        <td><input type="text" name="customer" required value="{{ form.customer or '' }}" placeholder="실명"></td>
-        <td><input type="tel" name="phone" required value="{{ form.phone or '' }}" placeholder="010-1234-5678"></td>
-        <td class="os-td-addr"><span class="os-addr-display">{{ form.address or '↑ 위에서 입력' }}</span></td>
-        {# 금액 #}
-        <td><input type="number" name="unit_price" id="unit_price" min="0" required value="{{ form.unit_price or '' }}" class="os-num"></td>
-        <td><input type="number" name="order_qty" id="order_qty" value="{{ form.order_qty or form.qty or 1 }}" min="0" class="os-num"></td>
-        <td><input type="number" name="sales" id="sales" value="{{ form.sales or '' }}" step="1" readonly class="os-num os-readonly"></td>
-        <td><input type="number" name="deduct" id="deduct" value="{{ form.deduct or 0 }}" step="1" class="os-num"></td>
-        <td><input type="number" name="ship" id="ship" value="{{ form.ship or 0 }}" min="0" step="1" class="os-num"></td>
-        <td><input type="text" id="total_display" readonly class="os-num os-readonly" value="0원"></td>
-        {# 결제 #}
+        {# 23. 결제 #}
         <td>
           <select name="pay_method" required>
             <option value="">선택</option>
@@ -155,9 +156,9 @@
             <option value="bank" {% if form.pay_method=='bank' %}selected{% endif %}>무통장</option>
           </select>
         </td>
-        {# 비고 #}
+        {# 24. 비고 #}
         <td><input type="text" name="remark" value="{{ form.remark or '' }}"></td>
-        {# 예상출고 #}
+        {# 25~27. 예상출고 #}
         <td><input type="text" name="expected_ship_type" value="{{ form.expected_ship_type or '' }}"></td>
         <td><input type="text" name="expected_freight" value="{{ form.expected_freight or '' }}" class="os-num"></td>
         <td><input type="number" name="expected_ship_qty" value="{{ form.expected_ship_qty or '' }}" step="1" min="0" class="os-num"></td>
