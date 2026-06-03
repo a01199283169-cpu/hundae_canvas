@@ -238,6 +238,7 @@ async def order_create(
     plate: str = Form(""),
     acrylic: str = Form(""),
     hook: str = Form(""),
+    item_note: str = Form(""),
     qty: float = Form(1),
     unit_price: float = Form(0),
     image_file: UploadFile | None = File(None),
@@ -258,12 +259,13 @@ async def order_create(
         "expected_ship_qty": expected_ship_qty or None,
         "frame": frame, "size": size, "width": width, "height": height,
         "color": color, "plate": plate, "acrylic": acrylic, "hook": hook,
-        "qty": qty, "unit_price": unit_price, **pay,
+        "item_note": item_note, "qty": qty, "unit_price": unit_price, **pay,
     }
     items = [{
         "frame": frame, "size": size, "width": width or None,
         "height": height or None, "color": color, "plate": plate,
-        "acrylic": acrylic, "hook": hook, "qty": qty, "unit_price": unit_price,
+        "acrylic": acrylic, "hook": hook, "item_note": item_note or None,
+        "qty": qty, "unit_price": unit_price,
     }]
 
     errors = validate_new_order(form_data, items)
