@@ -8,7 +8,7 @@ from typing import Any
 
 from src.config_loader import ROOT_DIR, load_config, resolve_path
 from src.database import connect, fetch_order_items, init_db
-from src.db_backend import has_image_clause, insert_returning_id, is_postgres
+from src.db_backend import has_image_clause, insert_returning_id, is_postgres, normalize_date
 
 
 def image_to_url(image_file: str | None) -> str | None:
@@ -1028,14 +1028,41 @@ def get_settlement_summary(month: str | None = None) -> dict[str, Any]:
     return {"month": month, "daily_stats": data["daily_stats"], "grand": data["grand"]}
 
 
+def _sheet_date_str(value: Any) -> str | None:
+    """DB DATE/datetime → YYYY-MM-DD (필터·표시 공통)."""
+    return normalize_date(value)
+
+
+def get_production_dates() -> list[str]:
+    """생산지시 일자 목록 — 필터 드롭다운용 (필터 적용과 무관하게 전체 일자)."""
+    conn = connect()
+    rows = conn.execute(
+        """
+        SELECT DISTINCT o.sheet_date
+        FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.sheet_date IS NOT NULL
+        ORDER BY o.sheet_date DESC
+        """
+    ).fetchall()
+    conn.close()
+    dates: list[str] = []
+    for r in rows:
+        d = _sheet_date_str(r[0] if isinstance(r, (list, tuple)) else r["sheet_date"])
+        if d and d not in dates:
+            dates.append(d)
+    return dates
+
+
 def get_production_list(sheet_date: str | None = None) -> list[dict]:
-    """생산지시용 품목 목록."""
+    """생산지시용 품목 목록. sheet_date 지정 시 해당 일자만."""
     conn = connect()
     where = "1=1"
     params: list = []
-    if sheet_date:
+    normalized = _sheet_date_str(sheet_date) if sheet_date else None
+    if normalized:
         where = "o.sheet_date = ?"
-        params = [sheet_date]
+        params = [normalized]
 
     rows = conn.execute(
         f"""
@@ -1054,6 +1081,7 @@ def get_production_list(sheet_date: str | None = None) -> list[dict]:
     items = []
     for r in rows:
         d = dict(r)
+        d["sheet_date"] = _sheet_date_str(d.get("sheet_date")) or d.get("sheet_date")
         d["missing"] = order_missing_fields(d)
         d["is_complete"] = len(d["missing"]) == 0
         items.append(d)

@@ -21,6 +21,7 @@ def _thin_border() -> Border:
 def export_production_sheet(
     source_file: str | None = None,
     sheet_filter: str | None = None,
+    sheet_date: str | None = None,
 ) -> Path:
     """
     생산지시서 엑셀 생성.
@@ -45,6 +46,9 @@ def export_production_sheet(
     if sheet_filter:
         sql += " AND o.sheet_name=?"
         params.append(sheet_filter)
+    if sheet_date:
+        sql += " AND o.sheet_date=?"
+        params.append(sheet_date)
     sql += " ORDER BY o.sheet_date, o.sheet_name, CAST(o.order_no AS INTEGER)"
 
     orders = conn.execute(sql, params).fetchall()
@@ -162,7 +166,7 @@ def export_production_sheet(
 
     conn.close()
 
-    suffix = sheet_filter or "전체"
+    suffix = sheet_date or sheet_filter or "전체"
     out_path = paths["production"] / f"생산지시서_{suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     wb.save(out_path)
     wb.close()

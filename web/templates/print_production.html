@@ -1,7 +1,7 @@
 {% extends "print_layout.html" %}
 {% block title %}생산지시서{% endblock %}
 {% block doc_title %}생산 지시서{% endblock %}
-{% block print_meta %}{% if date_filter %}{{ date_filter }} · {% endif %}품목 {{ items|length }}건{% endblock %}
+{% block print_meta %}{% if date_filter %}{{ date_filter }} 일자 · {% else %}전체 일자 · {% endif %}품목 {{ items|length }}건{% endblock %}
 {% block print_content %}
 <table class="print-table">
   <thead>

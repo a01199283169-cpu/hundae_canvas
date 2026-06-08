@@ -29,6 +29,7 @@ from src.web_service import (
     get_dashboard_stats,
     get_order,
     get_platform_list,
+    get_production_dates,
     get_production_list,
     get_settlement_data,
     get_upload_dir,
@@ -384,15 +385,15 @@ async def upload_image(order_id: int, file: UploadFile = File(...)):
 
 @app.get("/production", response_class=HTMLResponse)
 async def production_page(request: Request, date_filter: str = ""):
+    date_filter = date_filter.strip()
     items = get_production_list(date_filter or None)
-    dates = sorted({i["sheet_date"] for i in items if i.get("sheet_date")}, reverse=True)
     return render(
         request,
         "production.html",
         {
             "page": "production",
             "items": items,
-            "dates": dates,
+            "dates": get_production_dates(),
             "date_filter": date_filter,
             "incomplete_count": count_incomplete_orders(),
         },
@@ -400,19 +401,16 @@ async def production_page(request: Request, date_filter: str = ""):
 
 
 @app.get("/production/download")
-async def production_download():
-    path = export_production_sheet()
+async def production_download(date_filter: str = ""):
+    date_filter = date_filter.strip()
+    path = export_production_sheet(sheet_date=date_filter or None)
     return FileResponse(path, filename=path.name)
 
 
 @app.get("/output", response_class=HTMLResponse)
 async def output_page(request: Request):
     """출력·다운로드 허브."""
-    items = get_production_list(None)
-    prod_dates = sorted(
-        {i["sheet_date"] for i in items if i.get("sheet_date")},
-        reverse=True,
-    )
+    prod_dates = get_production_dates()
     return render(
         request,
         "output.html",
@@ -426,6 +424,7 @@ async def output_page(request: Request):
 
 @app.get("/output/print/production", response_class=HTMLResponse)
 async def print_production(date_filter: str = ""):
+    date_filter = date_filter.strip()
     items = get_production_list(date_filter or None)
     return render_print(
         "print_production.html",
